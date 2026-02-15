@@ -8,9 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getSceneById,
   confirmSceneDescription,
+  getScenesByProjectId,
   SceneError,
 } from "@/lib/db/scenes";
-import { isProjectOwner } from "@/lib/db/projects";
+import { isProjectOwner, updateProjectStage } from "@/lib/db/projects";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -45,7 +46,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Confirm the description
     const updatedScene = await confirmSceneDescription(id);
 
-    return NextResponse.json({ scene: updatedScene });
+    // Check if all descriptions are now confirmed → advance to images stage
+    const allScenes = await getScenesByProjectId(scene.project_id);
+    const allDescriptionsConfirmed = allScenes.every((s) => s.description_confirmed || s.id === id);
+    let stageAdvanced = false;
+    if (allDescriptionsConfirmed) {
+      await updateProjectStage(scene.project_id, user.id, "images");
+      stageAdvanced = true;
+    }
+
+    return NextResponse.json({ scene: updatedScene, allConfirmed: allDescriptionsConfirmed, stageAdvanced });
   } catch (error) {
     if (error instanceof SceneError) {
       if (error.code === "not_found") {

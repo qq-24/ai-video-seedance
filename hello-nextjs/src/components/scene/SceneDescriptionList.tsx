@@ -35,6 +35,14 @@ export function SceneDescriptionList({
       throw new Error("Failed to confirm scene");
     }
 
+    const data = await response.json();
+
+    // If all descriptions are now confirmed, reload to advance to images stage
+    if (data.stageAdvanced) {
+      window.location.reload();
+      return;
+    }
+
     setLocalScenes((prev) =>
       prev.map((s) =>
         s.id === sceneId ? { ...s, description_confirmed: true } : s
@@ -86,7 +94,7 @@ export function SceneDescriptionList({
   };
 
   const handleRegenerate = async () => {
-    if (!confirm("确定要重新生成分镜吗？当前的分镜将被删除。")) {
+    if (!confirm("Are you sure you want to regenerate scenes? Current scenes will be deleted.")) {
       return;
     }
 
@@ -119,11 +127,11 @@ export function SceneDescriptionList({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
-            已确认 {confirmedCount} / {localScenes.length} 个分镜
+            Confirmed {confirmedCount} / {localScenes.length} scenes
           </span>
           {allConfirmed && (
             <span className="text-sm text-green-600 dark:text-green-400">
-              ✓ 全部确认
+              ✓ All Confirmed
             </span>
           )}
         </div>
@@ -161,7 +169,7 @@ export function SceneDescriptionList({
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          {isRegenerating ? "重新生成中..." : "重新生成分镜"}
+          {isRegenerating ? "Regenerating..." : "Regenerate Scenes"}
         </button>
 
         {!allConfirmed && (
@@ -191,7 +199,7 @@ export function SceneDescriptionList({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                确认中...
+                Confirming...
               </>
             ) : (
               <>
@@ -208,7 +216,7 @@ export function SceneDescriptionList({
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                确认所有分镜
+                Confirm All Scenes
               </>
             )}
           </button>

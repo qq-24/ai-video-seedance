@@ -511,6 +511,62 @@ export async function getSignedUrl(
 }
 
 /**
+ * Get a publicly accessible URL for a storage file.
+ * If Supabase is running locally, downloads the file and uploads to a
+ * temporary public host (0x0.st) so external APIs can access it.
+ * If Supabase is a cloud instance, returns the signed URL directly.
+ */
+export async function getPublicImageUrl(
+  storagePath: string,
+  expiresIn: number = 3600
+): Promise<string> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const isLocal = supabaseUrl.includes("127.0.0.1") || supabaseUrl.includes("localhost");
+
+  const signedUrl = await getSignedUrl(storagePath, expiresIn);
+
+  if (!isLocal) {
+    // Cloud Supabase — signed URL is publicly accessible
+    return signedUrl;
+  }
+
+  // Local Supabase — need to download and re-upload to a public host
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .download(storagePath);
+
+  if (error || !data) {
+    throw new MediaError("Failed to download file for public upload", "storage_error");
+  }
+
+  // Upload to tmpfiles.org (temporary public file hosting)
+  const buffer = Buffer.from(await data.arrayBuffer());
+  const blob = new Blob([buffer], { type: data.type || "image/png" });
+  const formData = new FormData();
+  formData.append("file", blob, storagePath.split("/").pop() || "image.png");
+
+  const uploadResponse = await fetch("https://tmpfiles.org/api/v1/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new MediaError(
+      `Failed to upload to public host: ${uploadResponse.status}`,
+      "storage_error"
+    );
+  }
+
+  const result = await uploadResponse.json();
+  // Convert tmpfiles.org URL to direct download URL
+  // e.g. http://tmpfiles.org/12345/image.png -> https://tmpfiles.org/dl/12345/image.png
+  const tmpUrl: string = result.data?.url || "";
+  const publicUrl = tmpUrl.replace("tmpfiles.org/", "tmpfiles.org/dl/").replace("http://", "https://");
+  return publicUrl;
+}
+
+/**
  * Generate signed URLs for multiple files
  * @param storagePaths - Array of storage paths
  * @param expiresIn - URL expiration time in seconds (default: 1 hour)

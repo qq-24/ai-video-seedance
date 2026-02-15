@@ -52,6 +52,8 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
   const handleGenerateImage = async (sceneId: string) => {
     const response = await fetch(`/api/generate/image/${sceneId}`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
     });
 
     if (!response.ok) {
@@ -116,6 +118,14 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
 
     if (!response.ok) {
       throw new Error("Failed to confirm image");
+    }
+
+    const data = await response.json();
+
+    // If all images are now confirmed, reload to advance to videos stage
+    if (data.stageAdvanced) {
+      window.location.reload();
+      return;
     }
 
     setLocalScenes((prev) =>
@@ -187,11 +197,11 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
-            已确认 {confirmedCount} / {localScenes.length} 张图片
+            Confirmed {confirmedCount} / {localScenes.length} images
           </span>
           {allConfirmed && (
             <span className="text-sm text-green-600 dark:text-green-400">
-              ✓ 全部确认
+              ✓ All Confirmed
             </span>
           )}
         </div>
@@ -218,7 +228,7 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            {isGeneratingAll ? "生成中..." : "生成所有图片"}
+            {isGeneratingAll ? "Generating..." : "Generate All Images"}
           </button>
         </div>
       )}
@@ -270,7 +280,7 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                确认中...
+                Confirming...
               </>
             ) : (
               <>
@@ -287,7 +297,7 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                确认所有图片
+                Confirm All Images
               </>
             )}
           </button>

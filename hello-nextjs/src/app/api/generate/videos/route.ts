@@ -10,7 +10,7 @@ import {
   updateSceneVideoStatus,
 } from "@/lib/db/scenes";
 import { getProjectById, updateProjectStage } from "@/lib/db/projects";
-import { getLatestImageBySceneId, createProcessingVideo, getSignedUrl } from "@/lib/db/media";
+import { getLatestImageBySceneId, createProcessingVideo, getPublicImageUrl } from "@/lib/db/media";
 import {
   createVideoTask,
   isVolcVideoConfigured,
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     // Check if Volc Video API is configured
     if (!isVolcVideoConfigured()) {
       return NextResponse.json(
-        { error: "Video generation service is not configured. Please set VOLC_API_KEY." },
+        { error: "Video generation service is not configured. Please set XSKILL_API_KEY." },
         { status: 503 }
       );
     }
@@ -148,8 +148,8 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Generate a fresh signed URL for the image (valid for 1 hour)
-      const imageUrl = await getSignedUrl(latestImage.storage_path, 3600);
+      // Get a publicly accessible URL for the image
+      const imageUrl = await getPublicImageUrl(latestImage.storage_path, 3600);
 
       const result = await createSceneVideoTask(
         scene.id,

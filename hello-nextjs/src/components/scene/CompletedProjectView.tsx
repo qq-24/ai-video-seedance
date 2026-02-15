@@ -8,6 +8,7 @@ import type { Scene, Image as ImageType, Video } from "@/types/database";
 type SceneWithMedia = Scene & { images: ImageType[]; videos: Video[] };
 
 interface CompletedProjectViewProps {
+  projectId: string;
   scenes: SceneWithMedia[];
   completedAt: string;
 }
@@ -17,12 +18,14 @@ interface CompletedProjectViewProps {
  * Displays all scene videos with download options.
  */
 export function CompletedProjectView({
+  projectId,
   scenes,
   completedAt,
 }: CompletedProjectViewProps) {
   const [selectedScene, setSelectedScene] = useState<SceneWithMedia | null>(
     scenes[0] ?? null
   );
+  const [isCombining, setIsCombining] = useState(false);
 
   // Collect all storage paths for images and videos
   const storagePaths = useMemo(() => {
@@ -47,7 +50,7 @@ export function CompletedProjectView({
     return signedUrls[storagePath];
   };
 
-  const completedDate = new Date(completedAt).toLocaleDateString("zh-CN", {
+  const completedDate = new Date(completedAt).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -56,7 +59,7 @@ export function CompletedProjectView({
   });
 
   const handleDownload = (video: Video, sceneIndex: number) => {
-    const downloadUrl = getSignedUrl(video.storage_path) ?? video.url;
+    const downloadUrl = getSignedUrl(video.storage_path) || video.url;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = `scene-${sceneIndex + 1}.mp4`;
@@ -73,6 +76,36 @@ export function CompletedProjectView({
         // Small delay between downloads
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
+    }
+  };
+
+  const handleCombineDownload = async () => {
+    setIsCombining(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/combine-videos`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to combine videos");
+      }
+
+      // Download the combined video blob
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "combined-video.mp4";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error combining videos:", err);
+      alert(err instanceof Error ? err.message : "Failed to combine videos");
+    } finally {
+      setIsCombining(false);
     }
   };
 
@@ -98,45 +131,68 @@ export function CompletedProjectView({
           </div>
           <div>
             <p className="font-medium text-green-800 dark:text-green-200">
-              项目已完成
+              Project Completed
             </p>
             <p className="text-sm text-green-600 dark:text-green-400">
-              完成于 {completedDate}
+              Completed on {completedDate}
             </p>
           </div>
         </div>
-        <button
-          onClick={handleDownloadAll}
-          className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="flex gap-2">
+          <button
+            onClick={handleCombineDownload}
+            disabled={isCombining}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-            />
-          </svg>
-          下载所有视频
-        </button>
+            {isCombining ? (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2h10v2M7 4h10M7 4l-2 16h14L17 4" />
+              </svg>
+            )}
+            {isCombining ? "Combining..." : "Combine & Download"}
+          </button>
+          <button
+            onClick={handleDownloadAll}
+            className="flex items-center gap-2 rounded-lg border border-green-600 px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50 dark:text-green-400 dark:border-green-500 dark:hover:bg-green-900/20"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            Download Separately
+          </button>
+        </div>
       </div>
 
       {/* Main Video Display */}
       {selectedScene && selectedScene.videos[0] && (
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="aspect-video w-full bg-black">
+            {(getSignedUrl(selectedScene.videos[0].storage_path) || selectedScene.videos[0].url) ? (
             <video
               key={selectedScene.videos[0].id}
-              src={getSignedUrl(selectedScene.videos[0].storage_path) ?? selectedScene.videos[0].url}
+              src={getSignedUrl(selectedScene.videos[0].storage_path) || selectedScene.videos[0].url || undefined}
               className="h-full w-full"
               controls
               autoPlay
             />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm text-zinc-500">Loading video...</div>
+            )}
           </div>
           <div className="p-4">
             <div className="mb-2 flex items-center gap-2">
@@ -144,7 +200,7 @@ export function CompletedProjectView({
                 {selectedScene.order_index + 1}
               </span>
               <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                分镜 {selectedScene.order_index + 1}
+                Scene {selectedScene.order_index + 1}
               </span>
             </div>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -169,7 +225,7 @@ export function CompletedProjectView({
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 />
               </svg>
-              下载此视频
+              Download This Video
             </button>
           </div>
         </div>
@@ -181,8 +237,8 @@ export function CompletedProjectView({
           const video = scene.videos[0];
           const image = scene.images[0];
           const isSelected = selectedScene?.id === scene.id;
-          const videoUrl = video ? (getSignedUrl(video.storage_path) ?? video.url) : undefined;
-          const imageUrl = image ? (getSignedUrl(image.storage_path) ?? image.url) : undefined;
+          const videoUrl = video ? (getSignedUrl(video.storage_path) || video.url || undefined) : undefined;
+          const imageUrl = image ? (getSignedUrl(image.storage_path) || image.url || undefined) : undefined;
 
           return (
             <button
@@ -203,7 +259,7 @@ export function CompletedProjectView({
               ) : imageUrl ? (
                 <Image
                   src={imageUrl}
-                  alt={`分镜 ${scene.order_index + 1}`}
+                  alt={`Scene ${scene.order_index + 1}`}
                   fill
                   className="object-cover"
                   sizes="150px"
@@ -242,7 +298,7 @@ export function CompletedProjectView({
       {/* Scene List */}
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <h3 className="mb-3 font-medium text-zinc-900 dark:text-zinc-100">
-          所有分镜
+          All Scenes
         </h3>
         <div className="space-y-2">
           {scenes.map((scene) => {
@@ -279,7 +335,7 @@ export function CompletedProjectView({
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                       />
                     </svg>
-                    下载
+                    Download
                   </button>
                 )}
               </div>

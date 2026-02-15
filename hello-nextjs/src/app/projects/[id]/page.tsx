@@ -184,6 +184,7 @@ export default async function ProjectDetailPage({
 
             {project.stage === "completed" && (
               <CompletedProjectView
+                projectId={project.id}
                 scenes={project.scenes}
                 completedAt={project.updated_at}
               />

@@ -157,6 +157,14 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
       throw new Error("Failed to confirm video");
     }
 
+    const data = await response.json();
+
+    // If all videos are now confirmed, reload to advance to completed stage
+    if (data.stageAdvanced) {
+      window.location.reload();
+      return;
+    }
+
     setLocalScenes((prev) =>
       prev.map((s) =>
         s.id === sceneId ? { ...s, video_confirmed: true } : s
@@ -229,11 +237,11 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
-            已确认 {confirmedCount} / {localScenes.length} 个视频
+            Confirmed {confirmedCount} / {localScenes.length} videos
           </span>
           {allConfirmed && (
             <span className="text-sm text-green-600 dark:text-green-400">
-              ✓ 全部确认，项目完成！
+              ✓ All Confirmed, project complete!
             </span>
           )}
         </div>
@@ -260,7 +268,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
                 d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
               />
             </svg>
-            {isGeneratingAll ? "生成中..." : "生成所有视频"}
+            {isGeneratingAll ? "Generating..." : "Generate All Videos"}
           </button>
         </div>
       )}
@@ -319,7 +327,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                确认中...
+                Confirming...
               </>
             ) : (
               <>
@@ -336,7 +344,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                确认所有视频
+                Confirm All Videos
               </>
             )}
           </button>

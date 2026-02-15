@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Check if Volc Video API is configured
     if (!isVolcVideoConfigured()) {
       return NextResponse.json(
-        { error: "Video generation service is not configured. Please set VOLC_API_KEY." },
+        { error: "Video generation service is not configured. Please set XSKILL_API_KEY." },
         { status: 503 }
       );
     }

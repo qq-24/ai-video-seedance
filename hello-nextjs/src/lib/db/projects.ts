@@ -145,10 +145,10 @@ export async function getProjectById(
 
   const [imagesResult, videosResult] = await Promise.all([
     sceneIds.length > 0
-      ? supabase.from("images").select("*").in("scene_id", sceneIds)
+      ? supabase.from("images").select("*").in("scene_id", sceneIds).order("version", { ascending: false })
       : { data: [], error: null },
     sceneIds.length > 0
-      ? supabase.from("videos").select("*").in("scene_id", sceneIds)
+      ? supabase.from("videos").select("*").in("scene_id", sceneIds).order("version", { ascending: false })
       : { data: [], error: null },
   ]);
 

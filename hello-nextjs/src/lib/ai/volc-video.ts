@@ -1,13 +1,16 @@
 /**
- * Volcano Engine Video Generation API wrapper.
- * Handles video generation using Doubao Seedance model (image-to-video).
- * API: https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks
+ * Video Generation API wrapper using Seedance 2.0 via xskill.ai.
+ * Supports text-to-video, image-to-video, and omni reference modes.
+ * API: https://api.xskill.ai/api/v3/tasks
  */
 
 // Configuration
-const VOLC_API_KEY = process.env.VOLC_API_KEY;
-const VOLC_VIDEO_TASKS_URL = process.env.VOLC_VIDEO_TASKS_URL || "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks";
-const DEFAULT_MODEL = "doubao-seedance-1-5-pro-251215";
+const XSKILL_API_KEY = process.env.XSKILL_API_KEY;
+const XSKILL_BASE_URL = "https://api.xskill.ai";
+const XSKILL_CREATE_URL = `${XSKILL_BASE_URL}/api/v3/tasks/create`;
+const XSKILL_QUERY_URL = `${XSKILL_BASE_URL}/api/v3/tasks/query`;
+const DEFAULT_MODEL = "st-ai/super-seed2";
+const DEFAULT_SEEDANCE_MODEL = "seedance_2.0_fast";
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -15,7 +18,7 @@ const RETRY_DELAY_MS = 2000;
 const REQUEST_TIMEOUT_MS = 60000; // 1 minute for API calls
 
 /**
- * Custom error class for Volcano Engine Video API errors
+ * Custom error class for Video API errors
  */
 export class VolcVideoApiError extends Error {
   constructor(
@@ -44,7 +47,7 @@ function sleep(ms: number): Promise<void> {
  * Check if the API credentials are configured
  */
 export function isVolcVideoConfigured(): boolean {
-  return !!VOLC_API_KEY;
+  return !!XSKILL_API_KEY;
 }
 
 /**
@@ -67,36 +70,36 @@ export interface VideoStatusResult {
 }
 
 /**
- * Create task response
+ * xskill.ai create task response
  */
-interface CreateTaskResponse {
-  id: string;
-  status?: string;
-  error?: {
-    message: string;
-    type: string;
-    code: string;
+interface XSkillCreateResponse {
+  code: number;
+  data?: {
+    task_id: string;
+    price?: number;
   };
+  message?: string;
 }
 
 /**
- * Get task status response
+ * xskill.ai query task response
  */
-interface GetTaskResponse {
-  id: string;
-  status: string;
-  content?: {
-    video_url?: string;
+interface XSkillQueryResponse {
+  code: number;
+  data?: {
+    task_id: string;
+    status: string;
+    output?: {
+      video_url?: string;
+      content_type?: string;
+    };
+    progress?: {
+      stage?: string;
+      message?: string;
+    };
+    error?: string;
   };
-  output?: {
-    url?: string;
-    duration?: number;
-  };
-  error?: {
-    message: string;
-    type: string;
-    code: string;
-  };
+  message?: string;
 }
 
 /**
@@ -120,121 +123,126 @@ export async function createVideoTask(
   } = {}
 ): Promise<VideoTaskResult> {
   if (!isVolcVideoConfigured()) {
-    throw new VolcVideoApiError("Volcano Engine video generation is not configured. Please set VOLC_API_KEY.");
+    throw new VolcVideoApiError("Video generation service is not configured. Please set XSKILL_API_KEY.");
   }
 
-  // Build prompt with parameters
   const duration = options.duration ?? 5;
-  const watermark = options.watermark ?? false;
-  const fullPrompt = `${prompt ?? ""} --duration ${duration} --camerafixed false --watermark ${watermark}`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const content: any[] = [
-    {
-      type: "text",
-      text: fullPrompt,
-    },
-    {
-      type: "image_url",
-      image_url: {
-        url: imageUrl,
-      },
-    },
-  ];
+  // Determine function mode based on materials
+  const hasVideoMaterials = options.materials?.some((m) => m.type === "video" && m.url);
+  const hasExtraImageMaterials = options.materials?.some((m) => m.type === "image" && m.url);
 
-  // Add materials to the content array for multi-modal generation
-  if (options.materials && options.materials.length > 0) {
-    for (const material of options.materials) {
-      if (material.type === "image" && material.url) {
-        content.push({
-          type: "image_url",
-          image_url: { url: material.url },
-        });
-      } else if (material.type === "video" && material.url) {
-        content.push({
-          type: "video_url",
-          video_url: { url: material.url },
-        });
-      } else if (material.type === "text" && material.content) {
-        const textEntry = content.find((c) => c.type === "text");
-        if (textEntry) {
-          textEntry.text += "\n" + material.content;
-        }
+  // Build prompt text, incorporating text materials
+  let fullPrompt = prompt ?? "";
+  if (options.materials) {
+    for (const mat of options.materials) {
+      if (mat.type === "text" && mat.content) {
+        fullPrompt += "\n" + mat.content;
       }
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let params: any;
+
+  if (hasVideoMaterials || hasExtraImageMaterials) {
+    // Use omni_reference mode for multi-modal input
+    const imageFiles = [imageUrl];
+    const videoFiles: string[] = [];
+
+    if (options.materials) {
+      for (const mat of options.materials) {
+        if (mat.type === "image" && mat.url) {
+          imageFiles.push(mat.url);
+        } else if (mat.type === "video" && mat.url) {
+          videoFiles.push(mat.url);
+        }
+      }
+    }
+
+    // Build prompt with references
+    let refPrompt = `@image_file_1 ${fullPrompt}`;
+    if (videoFiles.length > 0) {
+      refPrompt = `@image_file_1 按照 @video_file_1 的动作和运镜风格进行表演，${fullPrompt}`;
+    }
+
+    params = {
+      model: DEFAULT_SEEDANCE_MODEL,
+      prompt: refPrompt,
+      functionMode: "omni_reference",
+      image_files: imageFiles,
+      ...(videoFiles.length > 0 ? { video_files: videoFiles } : {}),
+      ratio: "16:9",
+      duration,
+    };
+  } else {
+    // Use first_last_frames mode for simple image-to-video
+    params = {
+      model: DEFAULT_SEEDANCE_MODEL,
+      prompt: fullPrompt,
+      functionMode: "first_last_frames",
+      filePaths: [imageUrl],
+      ratio: "16:9",
+      duration,
+    };
+  }
+
   const requestBody = {
     model: DEFAULT_MODEL,
-    content,
+    params,
+    channel: null,
   };
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
-      const response = await fetch(VOLC_VIDEO_TASKS_URL, {
+      const response = await fetch(XSKILL_CREATE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${VOLC_API_KEY}`,
+          "Authorization": `Bearer ${XSKILL_API_KEY}`,
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
-      const data: CreateTaskResponse = await response.json();
+      clearTimeout(timeoutId);
+      const data: XSkillCreateResponse = await response.json();
 
-      // Check for API error
-      if (data.error) {
+      if (data.code !== 200 || !data.data?.task_id) {
         throw new VolcVideoApiError(
-          data.error.message || `API error: ${data.error.code}`,
-          response.status,
-          data.error.code
-        );
-      }
-
-      if (!response.ok) {
-        throw new VolcVideoApiError(
-          `HTTP error: ${response.status}`,
+          data.message || `API error: code ${data.code}`,
           response.status
         );
       }
 
-      if (!data.id) {
-        throw new VolcVideoApiError("No task ID in response");
-      }
-
-      clearTimeout(timeoutId);
       return {
-        taskId: data.id,
-        status: (data.status as VideoTaskStatus) || "pending",
+        taskId: data.data.task_id,
+        status: "pending",
       };
     } catch (error) {
+      clearTimeout(timeoutId);
       lastError = error instanceof Error ? error : new Error("Unknown error");
 
-      // Don't retry on auth errors
-      if (error instanceof VolcVideoApiError && error.errorCode === "authentication_error") {
+      if (error instanceof VolcVideoApiError && error.statusCode === 401) {
         throw error;
       }
 
-      // Abort errors shouldn't be retried
       if ((error as Error).name === "AbortError") {
         throw new VolcVideoApiError("Request timed out");
       }
 
-      // Retry for other errors
       if (attempt < MAX_RETRIES) {
-        console.warn(`Volc Video API attempt ${attempt} failed, retrying...`, error);
+        console.warn(`xskill.ai create task attempt ${attempt} failed, retrying...`, error);
         await sleep(RETRY_DELAY_MS * attempt);
       }
     }
   }
 
-  clearTimeout(timeoutId);
   throw new VolcVideoApiError(
     `Failed after ${MAX_RETRIES} attempts: ${lastError?.message}`
   );
@@ -247,89 +255,77 @@ export async function createVideoTask(
  */
 export async function getVideoTaskStatus(taskId: string): Promise<VideoStatusResult> {
   if (!isVolcVideoConfigured()) {
-    throw new VolcVideoApiError("Volcano Engine video generation is not configured. Please set VOLC_API_KEY.");
+    throw new VolcVideoApiError("Video generation service is not configured. Please set XSKILL_API_KEY.");
   }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
-      const response = await fetch(`${VOLC_VIDEO_TASKS_URL}/${taskId}`, {
-        method: "GET",
+      // xskill.ai uses POST for task query
+      const response = await fetch(XSKILL_QUERY_URL, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${VOLC_API_KEY}`,
+          "Authorization": `Bearer ${XSKILL_API_KEY}`,
         },
+        body: JSON.stringify({ task_id: taskId }),
         signal: controller.signal,
       });
 
-      const data: GetTaskResponse = await response.json();
+      clearTimeout(timeoutId);
+      const data: XSkillQueryResponse = await response.json();
 
-      // Check for API error
-      if (data.error) {
-        // Task failed
-        return {
-          taskId: data.id,
-          status: "failed",
-          errorMessage: data.error.message,
-        };
-      }
-
-      if (!response.ok) {
+      if (data.code !== 200 || !data.data) {
         throw new VolcVideoApiError(
-          `HTTP error: ${response.status}`,
+          data.message || `API error: code ${data.code}`,
           response.status
         );
       }
 
-      clearTimeout(timeoutId);
-
-      // Log raw status for debugging
-      console.log(`Video task ${taskId} raw status:`, data.status);
+      const taskData = data.data;
 
       // Map status
       let status: VideoTaskStatus = "pending";
-      if (data.status === "RUNNING" || data.status === "processing" || data.status === "running") {
+      if (taskData.status === "processing" || taskData.status === "running") {
         status = "processing";
-      } else if (data.status === "SUCCESS" || data.status === "completed" || data.status === "succeeded") {
+      } else if (taskData.status === "completed" || taskData.status === "succeeded") {
         status = "completed";
-      } else if (data.status === "FAILED" || data.status === "failed") {
+      } else if (taskData.status === "failed") {
         status = "failed";
       }
 
-      // Get video URL - can be in content.video_url or output.url
-      const videoUrl = data.content?.video_url || data.output?.url;
+      // Video URL comes in output.video_url
+      const videoUrl = taskData.output?.video_url;
 
       return {
-        taskId: data.id,
+        taskId,
         status,
         videoUrl,
+        errorMessage: taskData.error,
       };
     } catch (error) {
+      clearTimeout(timeoutId);
       lastError = error instanceof Error ? error : new Error("Unknown error");
 
-      // Don't retry on auth errors
-      if (error instanceof VolcVideoApiError && error.errorCode === "authentication_error") {
+      if (error instanceof VolcVideoApiError && error.statusCode === 401) {
         throw error;
       }
 
-      // Abort errors shouldn't be retried
       if ((error as Error).name === "AbortError") {
         throw new VolcVideoApiError("Request timed out");
       }
 
-      // Retry for other errors
       if (attempt < MAX_RETRIES) {
-        console.warn(`Volc Video Status API attempt ${attempt} failed, retrying...`, error);
+        console.warn(`xskill.ai query task attempt ${attempt} failed, retrying...`, error);
         await sleep(RETRY_DELAY_MS * attempt);
       }
     }
   }
 
-  clearTimeout(timeoutId);
   throw new VolcVideoApiError(
     `Failed after ${MAX_RETRIES} attempts: ${lastError?.message}`
   );
@@ -349,8 +345,8 @@ export async function waitForVideoTask(
     onProgress?: (status: string) => void;
   } = {}
 ): Promise<VideoStatusResult> {
-  const pollInterval = options.pollIntervalMs ?? 5000; // Default 5 seconds
-  const maxWait = options.maxWaitMs ?? 600000; // Default 10 minutes
+  const pollInterval = options.pollIntervalMs ?? 5000;
+  const maxWait = options.maxWaitMs ?? 600000;
   const startTime = Date.now();
 
   while (Date.now() - startTime < maxWait) {

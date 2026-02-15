@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSceneById, updateSceneVideoStatus } from "@/lib/db/scenes";
 import { getProjectById } from "@/lib/db/projects";
-import { getLatestImageBySceneId, createProcessingVideo, getSignedUrl } from "@/lib/db/media";
+import { getLatestImageBySceneId, createProcessingVideo, getPublicImageUrl, getSignedUrl } from "@/lib/db/media";
 import {
   createVideoTask,
   isVolcVideoConfigured,
@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Check if Volc Video API is configured
     if (!isVolcVideoConfigured()) {
       return NextResponse.json(
-        { error: "Video generation service is not configured. Please set VOLC_API_KEY." },
+        { error: "Video generation service is not configured. Please set XSKILL_API_KEY." },
         { status: 503 }
       );
     }
@@ -87,9 +87,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Generate a fresh signed URL for the image (valid for 1 hour)
-    // This ensures the video API can access the image even from private bucket
-    const imageUrl = await getSignedUrl(latestImage.storage_path, 3600);
+    // Get a publicly accessible URL for the image
+    // Uses temp public host for local Supabase, signed URL for cloud
+    const imageUrl = await getPublicImageUrl(latestImage.storage_path, 3600);
 
     // Fetch materials for free mode scenes
     const materials: Array<{ type: "image" | "video" | "text"; url?: string; content?: string }> = [];
@@ -97,10 +97,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       const sceneMaterials = await getMaterialsBySceneId(sceneId);
       for (const mat of sceneMaterials) {
         if (mat.type === "image" && mat.storage_path) {
-          const matUrl = await getSignedUrl(mat.storage_path, 3600);
+          const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
           materials.push({ type: "image", url: matUrl });
         } else if (mat.type === "video" && mat.storage_path) {
-          const matUrl = await getSignedUrl(mat.storage_path, 3600);
+          const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
           materials.push({ type: "video", url: matUrl });
         } else if (mat.type === "text" && mat.metadata) {
           const content = typeof mat.metadata === "object" && mat.metadata !== null && "content" in mat.metadata
