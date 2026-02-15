@@ -19,11 +19,11 @@ export function Header({ user }: HeaderProps) {
 
   const navLinks = user
     ? [
-        { href: "/", label: "首页" },
-        { href: "/projects", label: "我的项目" },
-        { href: "/create", label: "创建项目" },
+        { href: "/", label: "Home" },
+        { href: "/projects", label: "My Projects" },
+        { href: "/create", label: "Create Project" },
       ]
-    : [{ href: "/", label: "首页" }];
+    : [{ href: "/", label: "Home" }];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -65,13 +65,13 @@ export function Header({ user }: HeaderProps) {
                 href="/login"
                 className="flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               >
-                登录
+                Log In
               </Link>
               <Link
                 href="/register"
                 className="flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
               >
-                注册
+                Sign Up
               </Link>
             </div>
           )}
@@ -138,14 +138,14 @@ export function Header({ user }: HeaderProps) {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="rounded-md px-3 py-2 text-center text-sm text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 >
-                  登录
+                  Log In
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="rounded-md bg-zinc-900 px-3 py-2 text-center text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
                 >
-                  注册
+                  Sign Up
                 </Link>
               </div>
             )}

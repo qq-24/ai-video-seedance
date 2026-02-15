@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { parseIntent, isZhipuConfigured, ZhipuApiError } from "@/lib/ai/zhipu";
+import { parseIntent, isGeminiConfigured, GeminiApiError } from "@/lib/ai/gemini";
 
 export async function POST(request: Request) {
   try {
@@ -18,9 +18,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!isZhipuConfigured()) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: "AI service is not configured. Please set ZHIPU_API_KEY." },
+        { error: "AI service is not configured. Please set GEMINI_API_KEY." },
         { status: 503 }
       );
     }
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[parse-intent] Error parsing intent:", error);
 
-    if (error instanceof ZhipuApiError) {
+    if (error instanceof GeminiApiError) {
       return NextResponse.json(
         { error: `AI service error: ${error.message}` },
         { status: 502 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateText, isZhipuConfigured } from "@/lib/ai/zhipu";
+import { generateText, isGeminiConfigured } from "@/lib/ai/gemini";
 import { createMaterial } from "@/lib/db/materials";
 import type { MaterialInsert } from "@/types/database";
 
@@ -13,9 +13,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!isZhipuConfigured()) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: "AI service is not configured. Please set ZHIPU_API_KEY." },
+        { error: "AI service is not configured. Please set GEMINI_API_KEY." },
         { status: 503 }
       );
     }

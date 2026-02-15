@@ -1,170 +1,170 @@
-# 多模态视频创作与首尾帧接续功能 Spec
+# Multimodal Video Creation and Head-to-Tail Frame Continuation Feature Spec
 
 ## Why
 
-当前系统仅支持"故事文本 → 场景拆分 → 图片 → 视频"的单一工作流，无法满足：
-1. 用户希望使用多种素材（音频、视频、图片、文字）作为参考输入
-2. 生成视频时长受限（最多15秒），无法制作长视频
-3. 缺乏素材临时生成能力，用户需要在外部准备素材
+The current system only supports a single workflow of "story text → scene splitting → images → videos" and cannot meet:
+1. Users wanting to use multiple types of materials (audio, video, images, text) as reference inputs
+2. Generated video duration is limited (max 15 seconds), unable to produce long videos
+3. Lack of on-the-fly material generation capability, users need to prepare materials externally
 
 ## What Changes
 
-- 新增多模态素材输入系统（音频、视频、图片、文字）
-- 新增素材临时生成功能（图片、文字、视频可在工具内生成）
-- 新增首尾帧接续功能，支持视频链式延长
-- 新增自然语言驱动的素材生成调用
-- 重构项目阶段流程，支持更灵活的创作模式
+- New multimodal material input system (audio, video, images, text)
+- New on-the-fly material generation feature (images, text, video can be generated within the tool)
+- New head-to-tail frame continuation feature, supporting chain-style video extension
+- New natural language-driven material generation invocation
+- Refactored project stage flow, supporting more flexible creation modes
 
 ## Impact
 
-- Affected specs: 项目创建流程、场景管理、素材管理、视频生成流程
-- Affected code: 
-  - `src/types/database.ts` - 数据库类型扩展
-  - `src/lib/ai/*` - AI 服务扩展
-  - `src/components/project/*` - 项目创建组件
-  - `src/components/scene/*` - 场景管理组件
-  - `src/app/api/*` - API 路由扩展
+- Affected specs: project creation flow, scene management, material management, video generation flow
+- Affected code:
+  - `src/types/database.ts` - Database type extensions
+  - `src/lib/ai/*` - AI service extensions
+  - `src/components/project/*` - Project creation components
+  - `src/components/scene/*` - Scene management components
+  - `src/app/api/*` - API route extensions
 
 ## ADDED Requirements
 
-### Requirement: 多模态素材输入
+### Requirement: Multimodal Material Input
 
-系统应当支持用户在创建场景时导入多种类型的素材作为参考输入。
+The system should support users importing multiple types of materials as reference inputs when creating scenes.
 
-#### Scenario: 导入音频素材
-- **WHEN** 用户点击"导入音频"按钮
-- **THEN** 系统允许用户上传音频文件（支持 mp3, wav, m4a 格式）
-- **AND** 音频文件存储到 Supabase Storage
-- **AND** 音频素材关联到当前场景
+#### Scenario: Import Audio Material
+- **WHEN** user clicks "Import Audio" button
+- **THEN** the system allows user to upload audio files (supports mp3, wav, m4a formats)
+- **AND** audio file is stored in Supabase Storage
+- **AND** audio material is associated with the current scene
 
-#### Scenario: 导入视频素材
-- **WHEN** 用户点击"导入视频"按钮
-- **THEN** 系统允许用户上传视频文件（支持 mp4, mov, webm 格式）
-- **AND** 视频文件存储到 Supabase Storage
-- **AND** 视频素材关联到当前场景
+#### Scenario: Import Video Material
+- **WHEN** user clicks "Import Video" button
+- **THEN** the system allows user to upload video files (supports mp4, mov, webm formats)
+- **AND** video file is stored in Supabase Storage
+- **AND** video material is associated with the current scene
 
-#### Scenario: 导入图片素材
-- **WHEN** 用户点击"导入图片"按钮
-- **THEN** 系统允许用户上传图片文件（支持 png, jpg, webp 格式）
-- **AND** 图片文件存储到 Supabase Storage
-- **AND** 图片素材关联到当前场景
+#### Scenario: Import Image Material
+- **WHEN** user clicks "Import Image" button
+- **THEN** the system allows user to upload image files (supports png, jpg, webp formats)
+- **AND** image file is stored in Supabase Storage
+- **AND** image material is associated with the current scene
 
-#### Scenario: 添加文字素材
-- **WHEN** 用户点击"添加文字"按钮
-- **THEN** 系统显示文字输入框
-- **AND** 用户输入的文字作为参考素材保存
+#### Scenario: Add Text Material
+- **WHEN** user clicks "Add Text" button
+- **THEN** the system displays a text input box
+- **AND** user-entered text is saved as reference material
 
-### Requirement: 素材临时生成
+### Requirement: On-the-fly Material Generation
 
-系统应当允许用户在创作过程中临时生成图片、文字描述和视频片段。
+The system should allow users to generate images, text descriptions, and video clips on-the-fly during the creation process.
 
-#### Scenario: 临时生成图片
-- **WHEN** 用户点击"生成图片"并输入描述
-- **THEN** 系统调用图片生成 AI 生成图片
-- **AND** 生成的图片自动作为当前场景的参考素材
+#### Scenario: On-the-fly Image Generation
+- **WHEN** user clicks "Generate Image" and inputs a description
+- **THEN** the system calls the image generation AI to generate an image
+- **AND** the generated image automatically becomes a reference material for the current scene
 
-#### Scenario: 临时生成文字描述
-- **WHEN** 用户点击"生成描述"并输入简要提示
-- **THEN** 系统调用文本 AI 生成详细描述
-- **AND** 生成的文字作为参考素材或场景描述
+#### Scenario: On-the-fly Text Description Generation
+- **WHEN** user clicks "Generate Description" and inputs a brief prompt
+- **THEN** the system calls the text AI to generate a detailed description
+- **AND** the generated text serves as reference material or scene description
 
-#### Scenario: 临时生成视频片段
-- **WHEN** 用户点击"生成视频片段"并提供描述
-- **THEN** 系统调用视频生成 AI 生成短视频
-- **AND** 生成的视频作为参考素材
+#### Scenario: On-the-fly Video Clip Generation
+- **WHEN** user clicks "Generate Video Clip" and provides a description
+- **THEN** the system calls the video generation AI to generate a short video
+- **AND** the generated video serves as reference material
 
-### Requirement: 自然语言素材调用
+### Requirement: Natural Language Material Invocation
 
-系统应当支持用户通过自然语言描述来调用素材生成功能。
+The system should support users calling material generation features through natural language descriptions.
 
-#### Scenario: 自然语言生成图片
-- **WHEN** 用户在输入框输入"生成一张夕阳下的海滩图片"
-- **THEN** 系统识别意图为图片生成
-- **AND** 提取描述"夕阳下的海滩"
-- **AND** 调用图片生成 API
+#### Scenario: Natural Language Image Generation
+- **WHEN** user enters "Generate an image of a beach at sunset" in the input box
+- **THEN** the system recognizes the intent as image generation
+- **AND** extracts the description "beach at sunset"
+- **AND** calls the image generation API
 
-#### Scenario: 自然语言生成描述
-- **WHEN** 用户在输入框输入"帮我写一段关于城市夜景的描述"
-- **THEN** 系统识别意图为文字生成
-- **AND** 调用文本生成 API
+#### Scenario: Natural Language Description Generation
+- **WHEN** user enters "Help me write a description of a city nightscape" in the input box
+- **THEN** the system recognizes the intent as text generation
+- **AND** calls the text generation API
 
-### Requirement: 首尾帧接续功能
+### Requirement: Head-to-Tail Frame Continuation Feature
 
-系统应当支持将已生成视频的尾帧作为新视频的首帧，实现视频链式延长。
+The system should support using the last frame of a generated video as the first frame of a new video, enabling chain-style video extension.
 
-#### Scenario: 提取尾帧作为首帧
-- **WHEN** 用户点击"接续生成"按钮
-- **THEN** 系统自动提取当前视频的最后一帧
-- **AND** 将该帧作为新视频生成的首帧参考
+#### Scenario: Extract Last Frame as First Frame
+- **WHEN** user clicks "Continue Generation" button
+- **THEN** the system automatically extracts the last frame of the current video
+- **AND** uses that frame as the first frame reference for new video generation
 
-#### Scenario: 链式视频生成
-- **WHEN** 用户完成一个视频生成后选择"继续延长"
-- **THEN** 系统创建新的视频任务
-- **AND** 新任务使用上一视频的尾帧作为首帧
-- **AND** 用户可输入新的动作描述
+#### Scenario: Chain Video Generation
+- **WHEN** user completes a video generation and selects "Continue Extending"
+- **THEN** the system creates a new video task
+- **AND** the new task uses the last frame of the previous video as its first frame
+- **AND** user can input new action descriptions
 
-#### Scenario: 视频链管理
-- **WHEN** 用户查看视频链
-- **THEN** 系统显示所有接续的视频片段
-- **AND** 用户可预览完整拼接后的效果
-- **AND** 用户可重新生成链中任意片段
+#### Scenario: Video Chain Management
+- **WHEN** user views the video chain
+- **THEN** the system displays all continued video segments
+- **AND** user can preview the complete concatenated result
+- **AND** user can regenerate any segment in the chain
 
-### Requirement: 素材面板
+### Requirement: Material Panel
 
-系统应当提供统一的素材管理面板，方便用户管理所有素材。
+The system should provide a unified material management panel for users to manage all materials conveniently.
 
-#### Scenario: 查看场景素材
-- **WHEN** 用户打开场景详情
-- **THEN** 系统显示该场景关联的所有素材（图片、视频、音频、文字）
-- **AND** 每个素材显示类型图标和预览
+#### Scenario: View Scene Materials
+- **WHEN** user opens scene details
+- **THEN** the system displays all materials associated with that scene (images, videos, audio, text)
+- **AND** each material displays a type icon and preview
 
-#### Scenario: 删除素材
-- **WHEN** 用户点击素材的删除按钮
-- **THEN** 系统从场景中移除该素材
-- **AND** 素材文件从存储中删除
+#### Scenario: Delete Material
+- **WHEN** user clicks the delete button on a material
+- **THEN** the system removes that material from the scene
+- **AND** the material file is deleted from storage
 
-#### Scenario: 素材排序
-- **WHEN** 用户拖拽素材
-- **THEN** 系统更新素材的显示顺序
-- **AND** 顺序影响生成时的参考优先级
+#### Scenario: Material Sorting
+- **WHEN** user drags and drops materials
+- **THEN** the system updates the display order of materials
+- **AND** the order affects reference priority during generation
 
 ## MODIFIED Requirements
 
-### Requirement: 项目创建流程
+### Requirement: Project Creation Flow
 
-原需求：用户输入故事标题、内容、选择风格后创建项目。
+Original requirement: Users create a project by inputting story title, content, and selecting a style.
 
-修改为：用户可选择两种创作模式：
-1. **故事模式**（原有）：输入完整故事，AI 自动拆分场景
-2. **自由模式**（新增）：手动创建场景，灵活添加各种素材
+Modified to: Users can choose between two creation modes:
+1. **Story Mode** (original): Input complete story, AI automatically splits into scenes
+2. **Free Mode** (new): Manually create scenes, flexibly add various materials
 
-#### Scenario: 选择创作模式
-- **WHEN** 用户创建新项目
-- **THEN** 系统显示模式选择界面
-- **AND** 用户可选择"故事模式"或"自由模式"
+#### Scenario: Select Creation Mode
+- **WHEN** user creates a new project
+- **THEN** the system displays mode selection interface
+- **AND** user can choose "Story Mode" or "Free Mode"
 
-### Requirement: 场景管理
+### Requirement: Scene Management
 
-原需求：场景仅包含描述文字和生成的图片/视频。
+Original requirement: Scenes only contain description text and generated images/videos.
 
-修改为：场景可包含多种素材类型，支持灵活的素材组合。
+Modified to: Scenes can contain multiple material types, supporting flexible material combinations.
 
-#### Scenario: 场景素材组合
-- **WHEN** 用户编辑场景
-- **THEN** 系统允许添加多个不同类型的素材
-- **AND** 用户可设置素材的用途（参考/生成依据）
+#### Scenario: Scene Material Composition
+- **WHEN** user edits a scene
+- **THEN** the system allows adding multiple different types of materials
+- **AND** user can set the purpose of materials (reference/generation basis)
 
-### Requirement: 视频生成
+### Requirement: Video Generation
 
-原需求：使用场景图片和描述生成视频。
+Original requirement: Generate videos using scene images and descriptions.
 
-修改为：支持多种输入组合生成视频，包括首尾帧接续。
+Modified to: Support multiple input combinations for video generation, including head-to-tail frame continuation.
 
-#### Scenario: 多素材视频生成
-- **WHEN** 用户触发视频生成
-- **THEN** 系统收集场景中的所有素材
-- **AND** 根据素材类型和用户描述生成视频
+#### Scenario: Multi-material Video Generation
+- **WHEN** user triggers video generation
+- **THEN** the system collects all materials in the scene
+- **AND** generates video based on material types and user descriptions
 
 ## REMOVED Requirements
 
-无删除的需求。原有功能保持兼容。
+No requirements removed. Original features remain compatible.

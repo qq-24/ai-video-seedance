@@ -13,9 +13,9 @@ import {
 } from "@/lib/db/scenes";
 import {
   regenerateScenes,
-  isZhipuConfigured,
-  ZhipuApiError,
-} from "@/lib/ai/zhipu";
+  isGeminiConfigured,
+  GeminiApiError,
+} from "@/lib/ai/gemini";
 
 /**
  * POST /api/generate/scenes/regenerate - Regenerate scenes with optional feedback
@@ -33,10 +33,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if Zhipu AI is configured
-    if (!isZhipuConfigured()) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: "AI service is not configured. Please set ZHIPU_API_KEY." },
+        { error: "AI service is not configured. Please set GEMINI_API_KEY." },
         { status: 503 }
       );
     }
@@ -68,7 +67,6 @@ export async function POST(request: Request) {
       description: scene.description,
     }));
 
-    // Regenerate scenes using Zhipu AI with previous context
     const sceneDescriptions = await regenerateScenes(
       project.story,
       project.style ?? undefined,
@@ -101,7 +99,7 @@ export async function POST(request: Request) {
     console.error("Error regenerating scenes:", error);
 
     // Handle specific errors
-    if (error instanceof ZhipuApiError) {
+    if (error instanceof GeminiApiError) {
       return NextResponse.json(
         { error: `AI service error: ${error.message}` },
         { status: 502 }

@@ -1,20 +1,18 @@
 /**
- * Zhipu AI API wrapper for GLM model interactions.
- * Handles chat completions for story-to-scenes conversion.
+ * Google Gemini API wrapper for LLM interactions.
+ * Handles chat completions for story-to-scenes conversion, intent parsing, and text generation.
  */
 
 import type {
-  ZhipuChatMessage,
-  ZhipuChatCompletionResponse,
   SceneDescription,
   StoryToScenesResult,
   IntentResult,
 } from "@/types/ai";
 
 // Configuration
-const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY;
-const ZHIPU_BASE_URL = process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4";
-const ZHIPU_MODEL = process.env.ZHIPU_MODEL || "glm-4";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3-pro-preview";
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -22,18 +20,21 @@ const RETRY_DELAY_MS = 1000;
 const REQUEST_TIMEOUT_MS = 60000;
 
 /**
- * Custom error class for Zhipu API errors
+ * Custom error class for Gemini API errors
  */
-export class ZhipuApiError extends Error {
+export class GeminiApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
     public errorCode?: string
   ) {
     super(message);
-    this.name = "ZhipuApiError";
+    this.name = "GeminiApiError";
   }
 }
+
+// Re-export with old name for backward compatibility
+export { GeminiApiError as ZhipuApiError };
 
 /**
  * Sleep utility for retry delays
@@ -43,15 +44,55 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Check if the API key is configured
+ * Check if the Gemini API key is configured
  */
-export function isZhipuConfigured(): boolean {
-  return !!ZHIPU_API_KEY;
+export function isGeminiConfigured(): boolean {
+  return !!GEMINI_API_KEY;
+}
+
+// Re-export with old name for backward compatibility
+export { isGeminiConfigured as isZhipuConfigured };
+
+/**
+ * Gemini API request types
+ */
+interface GeminiContent {
+  role: "user" | "model";
+  parts: { text: string }[];
+}
+
+interface GeminiGenerateContentRequest {
+  contents: GeminiContent[];
+  systemInstruction?: { parts: { text: string }[] };
+  generationConfig?: {
+    temperature?: number;
+    maxOutputTokens?: number;
+    responseMimeType?: string;
+  };
+}
+
+interface GeminiGenerateContentResponse {
+  candidates?: {
+    content: {
+      parts: { text: string }[];
+      role: string;
+    };
+    finishReason: string;
+  }[];
+  usageMetadata?: {
+    promptTokenCount: number;
+    candidatesTokenCount: number;
+    totalTokenCount: number;
+  };
+  error?: {
+    code: number;
+    message: string;
+    status: string;
+  };
 }
 
 /**
  * Story-to-scenes prompt template
- * Converts a user story into a structured list of scene descriptions
  */
 const STORY_TO_SCENES_SYSTEM_PROMPT = `You are a professional video script writer. Your task is to break down a short story provided by the user into individual scenes suitable for short video production.
 
@@ -111,21 +152,18 @@ function buildStyleGuidance(style?: string): string {
  * Parse JSON response from the model
  */
 function parseScenesJson(content: string): StoryToScenesResult {
-  // Try to extract JSON from the response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new ZhipuApiError("Failed to parse scenes from response: no JSON found");
+    throw new GeminiApiError("Failed to parse scenes from response: no JSON found");
   }
 
   try {
     const result = JSON.parse(jsonMatch[0]) as StoryToScenesResult;
 
-    // Validate the structure
     if (!result.scenes || !Array.isArray(result.scenes)) {
-      throw new ZhipuApiError("Invalid response structure: missing scenes array");
+      throw new GeminiApiError("Invalid response structure: missing scenes array");
     }
 
-    // Ensure each scene has required fields
     result.scenes = result.scenes.map((scene, index) => ({
       order_index: scene.order_index ?? index + 1,
       description: scene.description,
@@ -133,32 +171,46 @@ function parseScenesJson(content: string): StoryToScenesResult {
 
     return result;
   } catch (e) {
-    if (e instanceof ZhipuApiError) throw e;
-    throw new ZhipuApiError(`Failed to parse JSON: ${e instanceof Error ? e.message : "Unknown error"}`);
+    if (e instanceof GeminiApiError) throw e;
+    throw new GeminiApiError(`Failed to parse JSON: ${e instanceof Error ? e.message : "Unknown error"}`);
   }
 }
 
 /**
- * Make a chat completion request to Zhipu AI
+ * Make a generateContent request to Google Gemini API
  */
-async function chatCompletion(
-  messages: ZhipuChatMessage[],
+async function generateContent(
+  userMessage: string,
   options: {
+    systemPrompt?: string;
     temperature?: number;
-    maxTokens?: number;
+    maxOutputTokens?: number;
   } = {}
-): Promise<ZhipuChatCompletionResponse> {
-  if (!ZHIPU_API_KEY) {
-    throw new ZhipuApiError("ZHIPU_API_KEY is not configured");
+): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new GeminiApiError("GEMINI_API_KEY is not configured");
   }
 
-  const requestBody = {
-    model: ZHIPU_MODEL,
-    messages,
-    temperature: options.temperature ?? 0.7,
-    max_tokens: options.maxTokens ?? 4096,
-    stream: false,
+  const requestBody: GeminiGenerateContentRequest = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: userMessage }],
+      },
+    ],
+    generationConfig: {
+      temperature: options.temperature ?? 0.7,
+      maxOutputTokens: options.maxOutputTokens ?? 4096,
+    },
   };
+
+  if (options.systemPrompt) {
+    requestBody.systemInstruction = {
+      parts: [{ text: options.systemPrompt }],
+    };
+  }
+
+  const url = `${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -167,86 +219,78 @@ async function chatCompletion(
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await fetch(`${ZHIPU_BASE_URL}/chat/completions`, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${ZHIPU_API_KEY}`,
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new ZhipuApiError(
+        const errorData = await response.json().catch(() => ({})) as GeminiGenerateContentResponse;
+        throw new GeminiApiError(
           errorData.error?.message || `HTTP error ${response.status}`,
           response.status,
-          errorData.error?.code
+          errorData.error?.status
         );
       }
 
       clearTimeout(timeoutId);
-      return await response.json();
+      const data = (await response.json()) as GeminiGenerateContentResponse;
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new GeminiApiError("Empty response from Gemini model");
+      }
+
+      return text;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Unknown error");
 
-      // Don't retry on certain errors
-      if (error instanceof ZhipuApiError) {
+      // Don't retry on auth errors
+      if (error instanceof GeminiApiError) {
         if (error.statusCode === 401 || error.statusCode === 403) {
-          throw error; // Auth errors shouldn't be retried
+          throw error;
         }
       }
 
       // Abort errors shouldn't be retried
       if ((error as Error).name === "AbortError") {
-        throw new ZhipuApiError("Request timed out");
+        throw new GeminiApiError("Request timed out");
       }
 
-      // Retry for other errors
       if (attempt < MAX_RETRIES) {
-        console.warn(`Zhipu API attempt ${attempt} failed, retrying...`, error);
+        console.warn(`Gemini API attempt ${attempt} failed, retrying...`, error);
         await sleep(RETRY_DELAY_MS * attempt);
       }
     }
   }
 
   clearTimeout(timeoutId);
-  throw new ZhipuApiError(
+  throw new GeminiApiError(
     `Failed after ${MAX_RETRIES} attempts: ${lastError?.message}`
   );
 }
 
 /**
  * Convert a story into scene descriptions
- * @param story - The user's story text
- * @param style - Optional visual style for the scenes
- * @returns Array of scene descriptions
  */
 export async function storyToScenes(
   story: string,
   style?: string
 ): Promise<SceneDescription[]> {
   const styleGuidance = buildStyleGuidance(style);
-  const userPrompt = STORY_TO_SCENES_USER_PROMPT_TEMPLATE.replace("{story}", story).replace(
-    "{styleGuidance}",
-    styleGuidance
-  );
+  const userPrompt = STORY_TO_SCENES_USER_PROMPT_TEMPLATE
+    .replace("{story}", story)
+    .replace("{styleGuidance}", styleGuidance);
 
-  const messages: ZhipuChatMessage[] = [
-    { role: "system", content: STORY_TO_SCENES_SYSTEM_PROMPT },
-    { role: "user", content: userPrompt },
-  ];
-
-  const response = await chatCompletion(messages, {
+  const content = await generateContent(userPrompt, {
+    systemPrompt: STORY_TO_SCENES_SYSTEM_PROMPT,
     temperature: 0.8,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new ZhipuApiError("Empty response from model");
-  }
 
   const result = parseScenesJson(content);
   return result.scenes;
@@ -281,28 +325,23 @@ Must output in JSON format as follows:
 
 const DEFAULT_SYSTEM_PROMPT = "You are a helpful AI assistant.";
 
+/**
+ * Generate text using Gemini
+ */
 export async function generateText(
   prompt: string,
   systemPrompt?: string
 ): Promise<string> {
-  const messages: ZhipuChatMessage[] = [
-    { role: "system", content: systemPrompt || DEFAULT_SYSTEM_PROMPT },
-    { role: "user", content: prompt },
-  ];
-
-  const response = await chatCompletion(messages, {
+  return generateContent(prompt, {
+    systemPrompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
     temperature: 0.7,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new ZhipuApiError("Empty response from model");
-  }
-
-  return content;
 }
 
+/**
+ * Parse intent JSON from model response
+ */
 function parseIntentJson(content: string): IntentResult {
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
@@ -335,8 +374,8 @@ function parseIntentJson(content: string): IntentResult {
     return {
       type,
       description: parsed.description || "",
-      confidence: typeof parsed.confidence === "number" 
-        ? Math.max(0, Math.min(1, parsed.confidence)) 
+      confidence: typeof parsed.confidence === "number"
+        ? Math.max(0, Math.min(1, parsed.confidence))
         : 0.5,
     };
   } catch (e) {
@@ -349,36 +388,21 @@ function parseIntentJson(content: string): IntentResult {
   }
 }
 
+/**
+ * Parse user's natural language input to identify intent
+ */
 export async function parseIntent(input: string): Promise<IntentResult> {
-  const messages: ZhipuChatMessage[] = [
-    { role: "system", content: INTENT_RECOGNITION_SYSTEM_PROMPT },
-    { role: "user", content: input },
-  ];
-
-  const response = await chatCompletion(messages, {
+  const content = await generateContent(input, {
+    systemPrompt: INTENT_RECOGNITION_SYSTEM_PROMPT,
     temperature: 0.3,
-    maxTokens: 256,
+    maxOutputTokens: 256,
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    console.warn("[parseIntent] Empty response from model");
-    return {
-      type: "unknown",
-      description: "",
-      confidence: 0,
-    };
-  }
 
   return parseIntentJson(content);
 }
 
 /**
  * Regenerate scenes with additional guidance
- * @param story - The original story text
- * @param style - Visual style for the scenes
- * @param previousScenes - Previously generated scenes (for reference)
- * @param feedback - User feedback for improvement
  */
 export async function regenerateScenes(
   story: string,
@@ -405,20 +429,11 @@ ${story}
 
 ${styleGuidance}`;
 
-  const messages: ZhipuChatMessage[] = [
-    { role: "system", content: STORY_TO_SCENES_SYSTEM_PROMPT },
-    { role: "user", content: userPrompt },
-  ];
-
-  const response = await chatCompletion(messages, {
+  const content = await generateContent(userPrompt, {
+    systemPrompt: STORY_TO_SCENES_SYSTEM_PROMPT,
     temperature: 0.9,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new ZhipuApiError("Empty response from model");
-  }
 
   const result = parseScenesJson(content);
   return result.scenes;

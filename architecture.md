@@ -1,51 +1,51 @@
-# Spring FES Video - 架构设计文档
+# Spring FES Video - Architecture Design Document
 
-## 项目概述
+## Project Overview
 
-用户输入故事 + 选择画面风格 → LLM拆解分镜 → 生成分镜图片 → 生成视频
+User inputs story + selects visual style → LLM breaks down into storyboard scenes → generates scene images → generates videos
 
 ---
 
-## 技术栈
+## Tech Stack
 
-| 层级 | 技术选型 |
+| Layer | Technology |
 |-----|---------|
-| 前端 | Next.js 14+ (App Router) + TypeScript + Tailwind CSS |
-| 后端 | Next.js API Routes |
-| 数据库 | Supabase (PostgreSQL) |
-| 认证 | Supabase Auth |
-| 文件存储 | Supabase Storage |
-| LLM | 智谱AI GLM-4.7 (coding端点) |
-| 图片生成 | 火山引擎 Seedream 4.5 |
-| 视频生成 | 火山引擎 Seedance 1.5 pro |
+| Frontend | Next.js 14+ (App Router) + TypeScript + Tailwind CSS |
+| Backend | Next.js API Routes |
+| Database | Supabase (PostgreSQL) |
+| Authentication | Supabase Auth |
+| File Storage | Supabase Storage |
+| LLM | Zhipu AI GLM-4.7 (coding endpoint) |
+| Image Generation | Volcano Engine Seedream 4.5 |
+| Video Generation | Volcano Engine Seedance 1.5 pro |
 
 ---
 
-## 1. 系统架构图
+## 1. System Architecture Diagram
 
 ```mermaid
 graph TB
-    subgraph Frontend["前端 (Next.js)"]
-        UI[用户界面]
-        Pages[页面路由]
-        Components[组件库]
+    subgraph Frontend["Frontend (Next.js)"]
+        UI[User Interface]
+        Pages[Page Routes]
+        Components[Component Library]
     end
 
-    subgraph Backend["后端 (Next.js API)"]
+    subgraph Backend["Backend (Next.js API)"]
         API[API Routes]
-        Services[业务服务层]
+        Services[Business Service Layer]
     end
 
     subgraph Supabase["Supabase"]
-        Auth[认证服务]
+        Auth[Authentication Service]
         DB[(PostgreSQL)]
-        Storage[对象存储]
+        Storage[Object Storage]
     end
 
-    subgraph External["外部AI服务"]
-        Zhipu[智谱AI GLM<br/>故事→分镜]
-        VolcImage[火山引擎 Seedream<br/>图片生成]
-        VolcVideo[火山引擎 Seedance<br/>视频生成]
+    subgraph External["External AI Services"]
+        Zhipu[Zhipu AI GLM<br/>Story→Scenes]
+        VolcImage[Volcano Engine Seedream<br/>Image Generation]
+        VolcVideo[Volcano Engine Seedance<br/>Video Generation]
     end
 
     UI --> Pages
@@ -63,71 +63,71 @@ graph TB
 
 ---
 
-## 2. 核心业务流程图
+## 2. Core Business Flow Diagram
 
-> **关键特性**: 每一步都需要用户确认，不满意可重新生成
+> **Key Feature**: Each step requires user confirmation; if unsatisfied, the user can regenerate
 
 ```mermaid
 flowchart TD
-    Start([用户开始]) --> Auth{已登录?}
-    Auth -->|否| Login[登录/注册]
-    Auth -->|是| Input[输入故事 + 选择风格]
+    Start([User Starts]) --> Auth{Logged in?}
+    Auth -->|No| Login[Login/Register]
+    Auth -->|Yes| Input[Input Story + Select Style]
     Login --> Input
 
-    Input --> CreateProject[创建项目]
+    Input --> CreateProject[Create Project]
 
-    %% 阶段1: 分镜描述生成
-    CreateProject --> GenScenes[点击"生成分镜描述"]
-    GenScenes --> LLMProcess[调用智谱AI GLM]
-    LLMProcess --> ShowScenes[显示分镜描述列表]
-    ShowScenes --> ConfirmScenes{用户确认?}
-    ConfirmScenes -->|不满意| RegenerateScenes[重新生成]
+    %% Phase 1: Scene Description Generation
+    CreateProject --> GenScenes[Click "Generate Scene Descriptions"]
+    GenScenes --> LLMProcess[Call Zhipu AI GLM]
+    LLMProcess --> ShowScenes[Display Scene Description List]
+    ShowScenes --> ConfirmScenes{User Confirms?}
+    ConfirmScenes -->|Not Satisfied| RegenerateScenes[Regenerate]
     RegenerateScenes --> LLMProcess
-    ConfirmScenes -->|满意| ConfirmScenesYes[确认分镜]
+    ConfirmScenes -->|Satisfied| ConfirmScenesYes[Confirm Scenes]
 
-    %% 阶段2: 图片生成
-    ConfirmScenesYes --> GenImages[点击"生成图片"]
-    GenImages --> GenImageLoop[批量生成所有分镜图片]
-    GenImageLoop --> ShowImages[显示所有图片]
-    ShowImages --> ReviewImages{逐个确认图片}
-    ReviewImages -->|某张不满意| RegenerateImage[重新生成该图片]
+    %% Phase 2: Image Generation
+    ConfirmScenesYes --> GenImages[Click "Generate Images"]
+    GenImages --> GenImageLoop[Batch Generate All Scene Images]
+    GenImageLoop --> ShowImages[Display All Images]
+    ShowImages --> ReviewImages{Confirm Each Image}
+    ReviewImages -->|Unsatisfied with One| RegenerateImage[Regenerate That Image]
     RegenerateImage --> ShowImages
-    ReviewImages -->|全部满意| ConfirmImages[确认所有图片]
+    ReviewImages -->|All Satisfied| ConfirmImages[Confirm All Images]
 
-    %% 阶段3: 视频生成
-    ConfirmImages --> GenVideos[点击"生成视频"]
-    GenVideos --> GenVideoLoop[批量生成所有分镜视频]
-    GenVideoLoop --> PollVideos[轮询视频状态]
-    PollVideos --> ShowVideos[显示所有视频]
-    ShowVideos --> ReviewVideos{逐个确认视频}
-    ReviewVideos -->|某个不满意| RegenerateVideo[重新生成该视频]
+    %% Phase 3: Video Generation
+    ConfirmImages --> GenVideos[Click "Generate Videos"]
+    GenVideos --> GenVideoLoop[Batch Generate All Scene Videos]
+    GenVideoLoop --> PollVideos[Poll Video Status]
+    PollVideos --> ShowVideos[Display All Videos]
+    ShowVideos --> ReviewVideos{Confirm Each Video}
+    ReviewVideos -->|Unsatisfied with One| RegenerateVideo[Regenerate That Video]
     RegenerateVideo --> PollVideos
-    ReviewVideos -->|全部满意| Complete[项目完成]
+    ReviewVideos -->|All Satisfied| Complete[Project Complete]
 
-    Complete --> End([结束])
+    Complete --> End([End])
 ```
 
-### 用户交互流程
+### User Interaction Flow
 
 ```mermaid
 stateDiagram-v2
-    [*] --> 项目创建
-    项目创建 --> 分镜待生成: 点击生成分镜
-    分镜待生成 --> 分镜待确认: LLM生成完成
-    分镜待确认 --> 分镜待确认: 重新生成
-    分镜待确认 --> 图片待生成: 确认分镜
-    图片待生成 --> 图片待确认: 图片生成完成
-    图片待确认 --> 图片待确认: 重新生成某张
-    图片待确认 --> 视频待生成: 确认所有图片
-    视频待生成 --> 视频待确认: 视频生成完成
-    视频待确认 --> 视频待确认: 重新生成某个
-    视频待确认 --> 项目完成: 确认所有视频
-    项目完成 --> [*]
+    [*] --> ProjectCreation
+    ProjectCreation --> ScenesAwaitingGeneration: Click Generate Scenes
+    ScenesAwaitingGeneration --> ScenesAwaitingConfirmation: LLM Generation Complete
+    ScenesAwaitingConfirmation --> ScenesAwaitingConfirmation: Regenerate
+    ScenesAwaitingConfirmation --> ImagesAwaitingGeneration: Confirm Scenes
+    ImagesAwaitingGeneration --> ImagesAwaitingConfirmation: Image Generation Complete
+    ImagesAwaitingConfirmation --> ImagesAwaitingConfirmation: Regenerate One
+    ImagesAwaitingConfirmation --> VideosAwaitingGeneration: Confirm All Images
+    VideosAwaitingGeneration --> VideosAwaitingConfirmation: Video Generation Complete
+    VideosAwaitingConfirmation --> VideosAwaitingConfirmation: Regenerate One
+    VideosAwaitingConfirmation --> ProjectComplete: Confirm All Videos
+    ProjectComplete --> [*]
 ```
 
 ---
 
-## 3. 数据模型图
+## 3. Data Model Diagram
 
 ```mermaid
 erDiagram
@@ -147,9 +147,9 @@ erDiagram
         uuid id PK
         uuid user_id FK
         string title
-        text story "用户输入的故事"
-        string style "画面风格"
-        string stage "当前阶段: draft/scenes/images/videos/completed"
+        text story "User-input story"
+        string style "Visual style"
+        string stage "Current stage: draft/scenes/images/videos/completed"
         datetime created_at
         datetime updated_at
     }
@@ -157,84 +157,84 @@ erDiagram
     scenes {
         uuid id PK
         uuid project_id FK
-        int order_index "分镜顺序"
-        text description "分镜描述"
-        boolean description_confirmed "描述是否已确认"
-        string image_status "图片状态: pending/processing/completed/failed"
-        boolean image_confirmed "图片是否已确认"
-        string video_status "视频状态: pending/processing/completed/failed"
-        boolean video_confirmed "视频是否已确认"
+        int order_index "Scene order"
+        text description "Scene description"
+        boolean description_confirmed "Whether description is confirmed"
+        string image_status "Image status: pending/processing/completed/failed"
+        boolean image_confirmed "Whether image is confirmed"
+        string video_status "Video status: pending/processing/completed/failed"
+        boolean video_confirmed "Whether video is confirmed"
         datetime created_at
     }
 
     images {
         uuid id PK
         uuid scene_id FK
-        string storage_path "Storage路径"
-        string url "公开URL"
+        string storage_path "Storage path"
+        string url "Public URL"
         int width
         int height
-        int version "版本号(重新生成时+1)"
+        int version "Version number (incremented on regeneration)"
         datetime created_at
     }
 
     videos {
         uuid id PK
         uuid scene_id FK
-        string storage_path "Storage路径"
-        string url "公开URL"
-        int duration "时长(秒)"
-        string task_id "火山引擎任务ID"
-        int version "版本号(重新生成时+1)"
+        string storage_path "Storage path"
+        string url "Public URL"
+        int duration "Duration (seconds)"
+        string task_id "Volcano Engine task ID"
+        int version "Version number (incremented on regeneration)"
         datetime created_at
     }
 ```
 
-### 状态流转说明
+### Status Transition Reference
 
-| 字段 | 可能值 | 说明 |
+| Field | Possible Values | Description |
 |-----|-------|------|
-| project.stage | draft | 刚创建，还没开始 |
-| | scenes | 分镜阶段（生成/确认中） |
-| | images | 图片阶段（生成/确认中） |
-| | videos | 视频阶段（生成/确认中） |
-| | completed | 全部完成 |
-| scene.description_confirmed | false/true | 分镜描述是否已确认 |
-| scene.image_status | pending | 等待生成图片 |
-| | processing | 图片生成中 |
-| | completed | 图片已生成 |
-| | failed | 生成失败 |
-| scene.image_confirmed | false/true | 图片是否已确认 |
-| scene.video_status | pending | 等待生成视频 |
-| | processing | 视频生成中（轮询中） |
-| | completed | 视频已生成 |
-| | failed | 生成失败 |
-| scene.video_confirmed | false/true | 视频是否已确认 |
+| project.stage | draft | Just created, not started yet |
+| | scenes | Scene phase (generating/confirming) |
+| | images | Image phase (generating/confirming) |
+| | videos | Video phase (generating/confirming) |
+| | completed | All complete |
+| scene.description_confirmed | false/true | Whether scene description is confirmed |
+| scene.image_status | pending | Waiting for image generation |
+| | processing | Image generating |
+| | completed | Image generated |
+| | failed | Generation failed |
+| scene.image_confirmed | false/true | Whether image is confirmed |
+| scene.video_status | pending | Waiting for video generation |
+| | processing | Video generating (polling) |
+| | completed | Video generated |
+| | failed | Generation failed |
+| scene.video_confirmed | false/true | Whether video is confirmed |
 
 ---
 
-## 4. 页面结构图
+## 4. Page Structure Diagram
 
 ```mermaid
 graph TB
-    subgraph Auth["认证页面"]
-        LoginPage[登录页 /login]
-        RegisterPage[注册页 /register]
+    subgraph Auth["Authentication Pages"]
+        LoginPage[Login Page /login]
+        RegisterPage[Register Page /register]
     end
 
-    subgraph Main["主要页面"]
-        HomePage[首页 /]
-        ProjectsPage[项目列表 /projects]
-        CreatePage[创建项目 /create]
-        DetailPage[项目详情 /projects/:id]
+    subgraph Main["Main Pages"]
+        HomePage[Home Page /]
+        ProjectsPage[Project List /projects]
+        CreatePage[Create Project /create]
+        DetailPage[Project Detail /projects/:id]
     end
 
-    subgraph DetailFeatures["项目详情页功能"]
-        StorySection[故事展示区]
-        StyleSelector[风格选择器]
-        ScenesList[分镜列表]
-        SceneCard[分镜卡片<br/>图片+视频+描述]
-        Actions[操作按钮<br/>重新生成/下载]
+    subgraph DetailFeatures["Project Detail Page Features"]
+        StorySection[Story Display Area]
+        StyleSelector[Style Selector]
+        ScenesList[Scene List]
+        SceneCard[Scene Card<br/>Image+Video+Description]
+        Actions[Action Buttons<br/>Regenerate/Download]
     end
 
     HomePage --> CreatePage
@@ -253,108 +253,108 @@ graph TB
 
 ---
 
-## 5. API 设计
+## 5. API Design
 
-### 项目 API
+### Project API
 
-| 方法 | 路径 | 描述 |
+| Method | Path | Description |
 |-----|------|-----|
-| POST | /api/projects | 创建项目 |
-| GET | /api/projects | 获取项目列表 |
-| GET | /api/projects/:id | 获取项目详情（包含所有分镜及其媒体） |
-| PATCH | /api/projects/:id | 更新项目（标题、故事、风格） |
-| DELETE | /api/projects/:id | 删除项目 |
+| POST | /api/projects | Create project |
+| GET | /api/projects | Get project list |
+| GET | /api/projects/:id | Get project detail (including all scenes and their media) |
+| PATCH | /api/projects/:id | Update project (title, story, style) |
+| DELETE | /api/projects/:id | Delete project |
 
-### 分镜 API
+### Scene API
 
-| 方法 | 路径 | 描述 |
+| Method | Path | Description |
 |-----|------|-----|
-| GET | /api/projects/:id/scenes | 获取分镜列表 |
-| PATCH | /api/scenes/:id | 修改分镜描述 |
-| POST | /api/scenes/:id/confirm-description | 确认分镜描述 |
-| POST | /api/scenes/:id/confirm-image | 确认分镜图片 |
-| POST | /api/scenes/:id/confirm-video | 确认分镜视频 |
-| POST | /api/scenes/confirm-all-descriptions | 确认所有分镜描述 |
-| POST | /api/scenes/confirm-all-images | 确认所有分镜图片 |
-| POST | /api/scenes/confirm-all-videos | 确认所有分镜视频 |
+| GET | /api/projects/:id/scenes | Get scene list |
+| PATCH | /api/scenes/:id | Update scene description |
+| POST | /api/scenes/:id/confirm-description | Confirm scene description |
+| POST | /api/scenes/:id/confirm-image | Confirm scene image |
+| POST | /api/scenes/:id/confirm-video | Confirm scene video |
+| POST | /api/scenes/confirm-all-descriptions | Confirm all scene descriptions |
+| POST | /api/scenes/confirm-all-images | Confirm all scene images |
+| POST | /api/scenes/confirm-all-videos | Confirm all scene videos |
 
-### 生成 API
+### Generation API
 
-| 方法 | 路径 | 描述 |
+| Method | Path | Description |
 |-----|------|-----|
-| POST | /api/generate/scenes | LLM拆解故事→生成所有分镜描述 |
-| POST | /api/generate/scenes/regenerate | 重新生成所有分镜描述 |
-| POST | /api/generate/image/:sceneId | 为单个分镜生成图片 |
-| POST | /api/generate/images | 批量生成所有分镜图片 |
-| POST | /api/generate/video/:sceneId | 为单个分镜创建视频任务 |
-| GET | /api/generate/video/:taskId | 查询视频任务状态 |
-| POST | /api/generate/videos | 批量创建所有分镜视频任务 |
+| POST | /api/generate/scenes | LLM breaks down story → generates all scene descriptions |
+| POST | /api/generate/scenes/regenerate | Regenerate all scene descriptions |
+| POST | /api/generate/image/:sceneId | Generate image for a single scene |
+| POST | /api/generate/images | Batch generate all scene images |
+| POST | /api/generate/video/:sceneId | Create video task for a single scene |
+| GET | /api/generate/video/:taskId | Query video task status |
+| POST | /api/generate/videos | Batch create all scene video tasks |
 
 ---
 
-## 6. 外部 API 集成
+## 6. External API Integration
 
-### 6.1 智谱AI GLM (故事→分镜)
+### 6.1 Zhipu AI GLM (Story → Scenes)
 
 ```
-端点: https://open.bigmodel.cn/api/coding/paas/v4/chat/completions
-认证: Bearer Token
-模型: glm-4.7
+Endpoint: https://open.bigmodel.cn/api/coding/paas/v4/chat/completions
+Authentication: Bearer Token
+Model: glm-4.7
 ```
 
-请求示例:
+Request example:
 ```json
 {
   "model": "glm-4.7",
   "messages": [
     {
       "role": "system",
-      "content": "你是一个专业的分镜师，将故事拆解成多个分镜描述..."
+      "content": "You are a professional storyboard artist who breaks down stories into multiple scene descriptions..."
     },
     {
       "role": "user",
-      "content": "故事内容..."
+      "content": "Story content..."
     }
   ]
 }
 ```
 
-### 6.2 火山引擎 Seedream (图片生成)
+### 6.2 Volcano Engine Seedream (Image Generation)
 
 ```
-端点: https://ark.cn-beijing.volces.com/api/v3/images/generations
-认证: Bearer Token
-模型: doubao-seedream-4-5-251128
+Endpoint: https://ark.cn-beijing.volces.com/api/v3/images/generations
+Authentication: Bearer Token
+Model: doubao-seedream-4-5-251128
 ```
 
-请求示例:
+Request example:
 ```json
 {
   "model": "doubao-seedream-4-5-251128",
-  "prompt": "分镜描述 + 风格描述",
+  "prompt": "Scene description + style description",
   "size": "2K",
   "response_format": "url",
   "watermark": false
 }
 ```
 
-### 6.3 火山引擎 Seedance (视频生成)
+### 6.3 Volcano Engine Seedance (Video Generation)
 
 ```
-创建任务: POST https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks
-查询任务: GET https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/{task_id}
-认证: Bearer Token
-模型: doubao-seedance-1-5-pro-251215
+Create task: POST https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks
+Query task: GET https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/{task_id}
+Authentication: Bearer Token
+Model: doubao-seedance-1-5-pro-251215
 ```
 
-请求示例:
+Request example:
 ```json
 {
   "model": "doubao-seedance-1-5-pro-251215",
   "content": [
     {
       "type": "text",
-      "text": "动作描述..."
+      "text": "Action description..."
     },
     {
       "type": "image_url",
@@ -372,21 +372,21 @@ graph TB
 
 ---
 
-## 7. 画面风格选项
+## 7. Visual Style Options
 
-| 风格ID | 风格名称 | 描述 |
+| Style ID | Style Name | Description |
 |-------|---------|-----|
-| anime | 动漫风格 | 日本动漫风格 |
-| realistic | 写实风格 | 真实照片质感 |
-| watercolor | 水彩风格 | 水彩画效果 |
-| oil_painting | 油画风格 | 古典油画质感 |
-| 3d | 3D渲染 | 三维渲染风格 |
-| sketch | 素描风格 | 铅笔素描效果 |
-| cyberpunk | 赛博朋克 | 科幻霓虹风格 |
+| anime | Anime Style | Japanese anime style |
+| realistic | Realistic Style | Photorealistic quality |
+| watercolor | Watercolor Style | Watercolor painting effect |
+| oil_painting | Oil Painting Style | Classical oil painting quality |
+| 3d | 3D Rendering | Three-dimensional rendering style |
+| sketch | Sketch Style | Pencil sketch effect |
+| cyberpunk | Cyberpunk | Sci-fi neon style |
 
 ---
 
-## 8. 环境变量
+## 8. Environment Variables
 
 ```env
 # Supabase
@@ -394,9 +394,9 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# 智谱AI
+# Zhipu AI
 ZHIPU_API_KEY=your_zhipu_api_key
 
-# 火山引擎
+# Volcano Engine
 VOLC_API_KEY=your_volc_api_key
 ```

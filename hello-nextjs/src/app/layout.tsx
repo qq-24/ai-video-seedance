@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Spring FES Video - 故事转视频生成平台",
-  description: "输入您的故事，AI 将自动为您生成精美的分镜图片和视频",
+  title: "Spring FES Video - Story to Video Generation Platform",
+  description: "Enter your story, and AI will automatically generate beautiful storyboard images and videos for you",
 };
 
 export default function RootLayout({

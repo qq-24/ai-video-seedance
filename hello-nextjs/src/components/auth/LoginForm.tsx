@@ -35,7 +35,7 @@ export function LoginForm() {
       router.push("/");
       router.refresh();
     } catch {
-      setError("登录时发生错误，请稍后重试");
+      setError("An error occurred during login. Please try again later.");
       setIsLoading(false);
     }
   };
@@ -43,13 +43,13 @@ export function LoginForm() {
   const getErrorMessage = (message: string): string => {
     switch (message) {
       case "Invalid login credentials":
-        return "邮箱或密码错误";
+        return "Incorrect email or password";
       case "Email not confirmed":
-        return "请先验证您的邮箱";
+        return "Please verify your email first";
       case "Too many requests":
-        return "请求过于频繁，请稍后重试";
+        return "Too many requests. Please try again later.";
       default:
-        return message || "登录失败，请重试";
+        return message || "Login failed. Please try again.";
     }
   };
 
@@ -66,7 +66,7 @@ export function LoginForm() {
           htmlFor="email"
           className="block text-sm font-medium text-gray-700"
         >
-          邮箱
+          Email
         </label>
         <input
           id="email"
@@ -77,7 +77,7 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请输入邮箱"
+          placeholder="Enter your email"
         />
       </div>
 
@@ -86,7 +86,7 @@ export function LoginForm() {
           htmlFor="password"
           className="block text-sm font-medium text-gray-700"
         >
-          密码
+          Password
         </label>
         <input
           id="password"
@@ -97,7 +97,7 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请输入密码"
+          placeholder="Enter your password"
         />
       </div>
 
@@ -111,16 +111,16 @@ export function LoginForm() {
             : "bg-indigo-600 hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         )}
       >
-        {isLoading ? "登录中..." : "登录"}
+        {isLoading ? "Logging in..." : "Log In"}
       </button>
 
       <p className="text-center text-sm text-gray-600">
-        还没有账号？{" "}
+        Don&apos;t have an account?{" "}
         <Link
           href="/register"
           className="font-medium text-indigo-600 hover:text-indigo-500"
         >
-          立即注册
+          Sign up now
         </Link>
       </p>
     </form>

@@ -10,27 +10,27 @@ const stageConfig: Record<
   project_stage,
   { label: string; className: string }
 > = {
-  draft: { label: "草稿", className: "bg-zinc-100 text-zinc-600" },
-  scenes: { label: "分镜", className: "bg-blue-100 text-blue-700" },
-  images: { label: "图片", className: "bg-purple-100 text-purple-700" },
-  videos: { label: "视频", className: "bg-orange-100 text-orange-700" },
-  completed: { label: "完成", className: "bg-green-100 text-green-700" },
+  draft: { label: "Draft", className: "bg-zinc-100 text-zinc-600" },
+  scenes: { label: "Scenes", className: "bg-blue-100 text-blue-700" },
+  images: { label: "Images", className: "bg-purple-100 text-purple-700" },
+  videos: { label: "Videos", className: "bg-orange-100 text-orange-700" },
+  completed: { label: "Completed", className: "bg-green-100 text-green-700" },
 };
 
 /**
  * Style display names
  */
 const styleNames: Record<string, string> = {
-  realistic: "写实风格",
-  anime: "动漫风格",
-  cartoon: "卡通风格",
-  cinematic: "电影风格",
-  watercolor: "水彩风格",
-  oil_painting: "油画风格",
-  sketch: "素描风格",
-  cyberpunk: "赛博朋克",
-  fantasy: "奇幻风格",
-  scifi: "科幻风格",
+  realistic: "Realistic",
+  anime: "Anime",
+  cartoon: "Cartoon",
+  cinematic: "Cinematic",
+  watercolor: "Watercolor",
+  oil_painting: "Oil Painting",
+  sketch: "Sketch",
+  cyberpunk: "Cyberpunk",
+  fantasy: "Fantasy",
+  scifi: "Sci-Fi",
 };
 
 interface ProjectCardProps {
@@ -45,7 +45,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const styleName = project.style
     ? styleNames[project.style] ?? project.style
     : null;
-  const createdDate = new Date(project.created_at).toLocaleDateString("zh-CN", {
+  const createdDate = new Date(project.created_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -103,16 +103,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </span>
             )}
             {project.scene_count > 0 && (
-              <span>{project.scene_count} 个分镜</span>
+              <span>{project.scene_count} scenes</span>
             )}
           </div>
 
           <p className="mb-3 line-clamp-2 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {project.story ?? "暂无故事内容"}
+            {project.story ?? "No story content yet"}
           </p>
 
           <div className="flex items-center justify-between text-xs text-zinc-400 dark:text-zinc-500">
-            <span>创建于 {createdDate}</span>
+            <span>Created on {createdDate}</span>
             <svg
               className="h-4 w-4 transition-transform group-hover:translate-x-1"
               fill="none"

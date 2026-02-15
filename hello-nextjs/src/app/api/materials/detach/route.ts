@@ -4,7 +4,7 @@ import { getMaterialById, deleteMaterial } from "@/lib/db/materials";
 
 /**
  * POST /api/materials/detach
- * 从场景移除素材（不删除文件，仅删除数据库记录）
+ * Remove a material from a scene (does not delete the file, only deletes the database record)
  */
 export async function POST(request: Request) {
   try {

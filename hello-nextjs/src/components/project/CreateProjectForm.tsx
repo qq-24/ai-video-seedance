@@ -14,53 +14,53 @@ const STYLE_OPTIONS: {
 }[] = [
   {
     id: "realistic",
-    name: "写实风格",
-    description: "逼真的照片级效果，接近真实世界",
+    name: "Realistic",
+    description: "Photorealistic effects, close to the real world",
   },
   {
     id: "anime",
-    name: "动漫风格",
-    description: "日式动漫风格，色彩鲜艳明亮",
+    name: "Anime",
+    description: "Japanese anime style, vibrant and bright colors",
   },
   {
     id: "cartoon",
-    name: "卡通风格",
-    description: "可爱的卡通风格，适合儿童内容",
+    name: "Cartoon",
+    description: "Cute cartoon style, great for children's content",
   },
   {
     id: "cinematic",
-    name: "电影风格",
-    description: "电影质感，戏剧性的光影效果",
+    name: "Cinematic",
+    description: "Film quality, dramatic lighting effects",
   },
   {
     id: "watercolor",
-    name: "水彩风格",
-    description: "柔和的水彩画效果，艺术感强",
+    name: "Watercolor",
+    description: "Soft watercolor effects, highly artistic",
   },
   {
     id: "oil_painting",
-    name: "油画风格",
-    description: "经典油画质感，厚重有层次",
+    name: "Oil Painting",
+    description: "Classic oil painting texture, rich and layered",
   },
   {
     id: "sketch",
-    name: "素描风格",
-    description: "黑白线条素描，简洁有韵味",
+    name: "Sketch",
+    description: "Black and white line sketch, simple and elegant",
   },
   {
     id: "cyberpunk",
-    name: "赛博朋克",
-    description: "未来科技感，霓虹灯光效果",
+    name: "Cyberpunk",
+    description: "Futuristic tech feel, neon light effects",
   },
   {
     id: "fantasy",
-    name: "奇幻风格",
-    description: "魔法奇幻世界，神秘梦幻",
+    name: "Fantasy",
+    description: "Magical fantasy world, mysterious and dreamlike",
   },
   {
     id: "scifi",
-    name: "科幻风格",
-    description: "硬科幻风格，太空与科技",
+    name: "Sci-Fi",
+    description: "Hard sci-fi style, space and technology",
   },
 ];
 
@@ -77,12 +77,12 @@ export function CreateProjectForm() {
     setError(null);
 
     if (!title.trim()) {
-      setError("请输入项目标题");
+      setError("Please enter a project title");
       return;
     }
 
     if (!story.trim()) {
-      setError("请输入故事内容");
+      setError("Please enter story content");
       return;
     }
 
@@ -103,14 +103,14 @@ export function CreateProjectForm() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error ?? "创建项目失败");
+        throw new Error(data.error ?? "Failed to create project");
       }
 
       const { project } = await response.json();
       router.push(`/projects/${project.id}`);
     } catch (err) {
       console.error("Create project error:", err);
-      setError(err instanceof Error ? err.message : "创建项目失败，请重试");
+      setError(err instanceof Error ? err.message : "Failed to create project. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -124,14 +124,14 @@ export function CreateProjectForm() {
           htmlFor="title"
           className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
         >
-          项目标题
+          Project Title
         </label>
         <input
           type="text"
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="为您的项目起个名字"
+          placeholder="Give your project a name"
           className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
           disabled={isSubmitting}
         />
@@ -143,26 +143,26 @@ export function CreateProjectForm() {
           htmlFor="story"
           className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
         >
-          故事内容
+          Story Content
         </label>
         <textarea
           id="story"
           value={story}
           onChange={(e) => setStory(e.target.value)}
-          placeholder="描述您想要转换成视频的故事...&#10;&#10;例如：一只小猫在公园里追逐蝴蝶，最后累得躺在草地上睡着了。"
+          placeholder="Describe the story you want to convert into a video...&#10;&#10;Example: A little cat chases butterflies in the park and eventually falls asleep on the grass."
           rows={6}
           className="w-full resize-none rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
           disabled={isSubmitting}
         />
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          AI 将自动分析您的故事，拆解成多个分镜场景
+          AI will automatically analyze your story and break it into multiple storyboard scenes
         </p>
       </div>
 
       {/* Style Selector */}
       <div>
         <label className="mb-3 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          视频风格
+          Video Style
         </label>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {STYLE_OPTIONS.map((option) => (
@@ -209,7 +209,7 @@ export function CreateProjectForm() {
           disabled={isSubmitting}
           className="rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
-          取消
+          Cancel
         </button>
         <button
           type="submit"
@@ -237,7 +237,7 @@ export function CreateProjectForm() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              创建中...
+              Creating...
             </>
           ) : (
             <>
@@ -254,7 +254,7 @@ export function CreateProjectForm() {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              创建项目
+              Create Project
             </>
           )}
         </button>

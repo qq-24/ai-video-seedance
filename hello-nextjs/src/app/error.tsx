@@ -39,11 +39,11 @@ export default function Error({ error, reset }: ErrorProps) {
         </div>
 
         <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          出错了
+          Something Went Wrong
         </h1>
 
         <p className="mb-6 text-zinc-600 dark:text-zinc-400">
-          抱歉，发生了一些意外错误。请尝试刷新页面或返回首页。
+          Sorry, an unexpected error occurred. Please try refreshing the page or go back to the home page.
         </p>
 
         {error.message && (
@@ -57,13 +57,13 @@ export default function Error({ error, reset }: ErrorProps) {
             onClick={reset}
             className="rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            重试
+            Retry
           </button>
           <Link
             href="/"
             className="rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            返回首页
+            Back to Home
           </Link>
         </div>
       </div>

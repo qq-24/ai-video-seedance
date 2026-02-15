@@ -16,8 +16,8 @@ interface ModeOption {
 const MODE_OPTIONS: ModeOption[] = [
   {
     id: "story",
-    name: "故事模式",
-    description: "输入完整故事，AI自动拆分场景，适合快速创作",
+    name: "Story Mode",
+    description: "Enter a complete story, AI automatically splits into scenes, ideal for quick creation",
     icon: (
       <svg
         className="h-8 w-8"
@@ -36,8 +36,8 @@ const MODE_OPTIONS: ModeOption[] = [
   },
   {
     id: "free",
-    name: "自由模式",
-    description: "手动创建场景，灵活添加素材，适合精细控制",
+    name: "Free Mode",
+    description: "Manually create scenes, flexibly add materials, ideal for fine-grained control",
     icon: (
       <svg
         className="h-8 w-8"

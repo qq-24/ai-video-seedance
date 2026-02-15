@@ -44,7 +44,7 @@ export function DraftStageView({ projectId }: DraftStageViewProps) {
   return (
     <div className="py-8 text-center">
       <p className="mb-4 text-zinc-600 dark:text-zinc-400">
-        准备好了吗？点击下方按钮开始生成分镜描述
+        Ready? Click the button below to start generating scene descriptions
       </p>
       {error && (
         <p className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -67,7 +67,7 @@ export function DraftStageView({ projectId }: DraftStageViewProps) {
             d="M13 10V3L4 14h7v7l9-11h-7z"
           />
         </svg>
-        {isGenerating ? "生成中..." : "生成分镜"}
+        {isGenerating ? "Generating..." : "Generate Scenes"}
       </button>
     </div>
   );

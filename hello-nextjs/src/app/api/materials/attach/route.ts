@@ -4,7 +4,7 @@ import { getMaterialById, updateMaterial } from "@/lib/db/materials";
 
 /**
  * POST /api/materials/attach
- * 关联素材到场景（用于已上传但未关联的素材）
+ * Attach a material to a scene (for uploaded but unattached materials)
  */
 export async function POST(request: Request) {
   try {

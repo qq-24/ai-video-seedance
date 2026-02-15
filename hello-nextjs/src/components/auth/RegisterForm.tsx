@@ -22,14 +22,14 @@ export function RegisterForm() {
 
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError("两次输入的密码不一致");
+      setError("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
     // Validate password strength
     if (password.length < 6) {
-      setError("密码长度至少为6位");
+      setError("Password must be at least 6 characters");
       setIsLoading(false);
       return;
     }
@@ -56,7 +56,7 @@ export function RegisterForm() {
         router.push("/login");
       }, 2000);
     } catch {
-      setError("注册时发生错误，请稍后重试");
+      setError("An error occurred during registration. Please try again later.");
       setIsLoading(false);
     }
   };
@@ -64,17 +64,17 @@ export function RegisterForm() {
   const getErrorMessage = (message: string): string => {
     switch (message) {
       case "User already registered":
-        return "该邮箱已被注册";
+        return "This email is already registered";
       case "Password should be at least 6 characters":
-        return "密码长度至少为6位";
+        return "Password must be at least 6 characters";
       case "Invalid email":
-        return "请输入有效的邮箱地址";
+        return "Please enter a valid email address";
       case "Signup is disabled":
-        return "注册功能已禁用";
+        return "Registration is currently disabled";
       case "Too many requests":
-        return "请求过于频繁，请稍后重试";
+        return "Too many requests. Please try again later.";
       default:
-        return message || "注册失败，请重试";
+        return message || "Registration failed. Please try again.";
     }
   };
 
@@ -83,11 +83,11 @@ export function RegisterForm() {
       <div className="space-y-6">
         <div className="rounded-md bg-green-50 p-4">
           <p className="text-sm text-green-800">
-            注册成功！请查收验证邮件后登录。
+            Registration successful! Please check your email for verification, then log in.
           </p>
         </div>
         <p className="text-center text-sm text-gray-600">
-          即将跳转到登录页面...
+          Redirecting to login page...
         </p>
       </div>
     );
@@ -106,7 +106,7 @@ export function RegisterForm() {
           htmlFor="email"
           className="block text-sm font-medium text-gray-700"
         >
-          邮箱
+          Email
         </label>
         <input
           id="email"
@@ -117,7 +117,7 @@ export function RegisterForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请输入邮箱"
+          placeholder="Enter your email"
         />
       </div>
 
@@ -126,7 +126,7 @@ export function RegisterForm() {
           htmlFor="password"
           className="block text-sm font-medium text-gray-700"
         >
-          密码
+          Password
         </label>
         <input
           id="password"
@@ -137,7 +137,7 @@ export function RegisterForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请输入密码（至少6位）"
+          placeholder="Enter your password (at least 6 characters)"
         />
       </div>
 
@@ -146,7 +146,7 @@ export function RegisterForm() {
           htmlFor="confirmPassword"
           className="block text-sm font-medium text-gray-700"
         >
-          确认密码
+          Confirm Password
         </label>
         <input
           id="confirmPassword"
@@ -157,7 +157,7 @@ export function RegisterForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请再次输入密码"
+          placeholder="Enter your password again"
         />
       </div>
 
@@ -171,16 +171,16 @@ export function RegisterForm() {
             : "bg-indigo-600 hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         )}
       >
-        {isLoading ? "注册中..." : "注册"}
+        {isLoading ? "Signing up..." : "Sign Up"}
       </button>
 
       <p className="text-center text-sm text-gray-600">
-        已有账号？{" "}
+        Already have an account?{" "}
         <Link
           href="/login"
           className="font-medium text-indigo-600 hover:text-indigo-500"
         >
-          立即登录
+          Log in now
         </Link>
       </p>
     </form>

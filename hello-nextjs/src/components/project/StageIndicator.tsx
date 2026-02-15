@@ -8,11 +8,11 @@ const STAGES: {
   label: string;
   description: string;
 }[] = [
-  { id: "draft", label: "草稿", description: "准备故事" },
-  { id: "scenes", label: "分镜", description: "拆解场景" },
-  { id: "images", label: "图片", description: "生成图片" },
-  { id: "videos", label: "视频", description: "生成视频" },
-  { id: "completed", label: "完成", description: "项目完成" },
+  { id: "draft", label: "Draft", description: "Prepare story" },
+  { id: "scenes", label: "Scenes", description: "Break into scenes" },
+  { id: "images", label: "Images", description: "Generate images" },
+  { id: "videos", label: "Videos", description: "Generate videos" },
+  { id: "completed", label: "Done", description: "Project completed" },
 ];
 
 interface StageIndicatorProps {

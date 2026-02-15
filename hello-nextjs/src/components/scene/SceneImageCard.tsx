@@ -15,10 +15,10 @@ interface SceneImageCardProps {
  * Status display configuration
  */
 const statusConfig = {
-  pending: { label: "等待生成", className: "bg-zinc-100 text-zinc-600" },
-  processing: { label: "生成中", className: "bg-blue-100 text-blue-700" },
-  completed: { label: "已完成", className: "bg-green-100 text-green-700" },
-  failed: { label: "生成失败", className: "bg-red-100 text-red-700" },
+  pending: { label: "Pending", className: "bg-zinc-100 text-zinc-600" },
+  processing: { label: "Generating", className: "bg-blue-100 text-blue-700" },
+  completed: { label: "Completed", className: "bg-green-100 text-green-700" },
+  failed: { label: "Failed", className: "bg-red-100 text-red-700" },
 };
 
 /**
@@ -75,7 +75,7 @@ export function SceneImageCard({
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={`分镜 ${scene.order_index + 1}`}
+            alt={`Scene ${scene.order_index + 1}`}
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -104,7 +104,7 @@ export function SceneImageCard({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                <span className="text-sm text-zinc-500">生成中...</span>
+                <span className="text-sm text-zinc-500">Generating...</span>
               </div>
             ) : (
               <svg
@@ -176,7 +176,7 @@ export function SceneImageCard({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      生成中...
+                      Generating...
                     </>
                   ) : (
                     <>
@@ -193,7 +193,7 @@ export function SceneImageCard({
                           d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      {scene.image_status === "failed" ? "重新生成" : "生成图片"}
+                      {scene.image_status === "failed" ? "Regenerate" : "Generate Image"}
                     </>
                   )}
                 </button>
@@ -227,7 +227,7 @@ export function SceneImageCard({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      确认中...
+                      Confirming...
                     </>
                   ) : (
                     <>
@@ -244,7 +244,7 @@ export function SceneImageCard({
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      确认
+                      Confirm
                     </>
                   )}
                 </button>
@@ -272,7 +272,7 @@ export function SceneImageCard({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  生成中...
+                  Generating...
                 </div>
               )}
             </>
@@ -294,7 +294,7 @@ export function SceneImageCard({
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              已确认
+              Confirmed
             </div>
           )}
         </div>

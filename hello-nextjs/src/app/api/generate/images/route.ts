@@ -9,9 +9,9 @@ import { getScenesByProjectId, updateSceneImageStatus } from "@/lib/db/scenes";
 import { getProjectById, updateProjectStage } from "@/lib/db/projects";
 import {
   generateImage,
-  isVolcImageConfigured,
-  VolcImageApiError,
-} from "@/lib/ai/volc-image";
+  isGeminiImageConfigured,
+  GeminiImageApiError,
+} from "@/lib/ai/gemini-image";
 import {
   uploadAndCreateImage,
   deleteOldSceneImages,
@@ -105,10 +105,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if Volc Image API is configured
-    if (!isVolcImageConfigured()) {
+    if (!isGeminiImageConfigured()) {
       return NextResponse.json(
-        { error: "Image generation service is not configured. Please set VOLC_ACCESS_KEY and VOLC_SECRET_KEY." },
+        { error: "Image generation service is not configured. Please set GEMINI_API_KEY." },
         { status: 503 }
       );
     }
@@ -185,7 +184,7 @@ export async function POST(request: Request) {
     console.error("Error generating images:", error);
 
     // Handle specific errors
-    if (error instanceof VolcImageApiError) {
+    if (error instanceof GeminiImageApiError) {
       return NextResponse.json(
         { error: `Image generation error: ${error.message}` },
         { status: 502 }

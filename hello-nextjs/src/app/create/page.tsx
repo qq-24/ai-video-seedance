@@ -22,10 +22,10 @@ export default async function CreatePage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-              创建新项目
+              Create New Project
             </h1>
             <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-              输入您的故事，选择风格，AI 将为您生成精美的视频
+              Enter your story, choose a style, and AI will generate beautiful videos for you
             </p>
           </div>
 

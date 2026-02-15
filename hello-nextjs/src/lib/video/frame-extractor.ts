@@ -241,16 +241,16 @@ export async function extractLastFrame(
 
 export function getClientExtractionInstructions(): string {
   return `
-前端视频尾帧提取方案：
+Client-side video last frame extraction approach:
 
-1. 使用 HTMLVideoElement + Canvas 方案：
-   - 创建隐藏的 video 元素加载视频
-   - 监听 loadedmetadata 事件获取视频时长
-   - 将 currentTime 设置为视频末尾（duration - 0.1秒）
-   - 监听 seeked 事件后，使用 canvas.drawImage() 绘制当前帧
-   - 使用 canvas.toDataURL() 或 canvas.toBlob() 获取图片数据
+1. Using HTMLVideoElement + Canvas approach:
+   - Create a hidden video element to load the video
+   - Listen for the loadedmetadata event to get the video duration
+   - Set currentTime to near the end of the video (duration - 0.1 seconds)
+   - After the seeked event fires, use canvas.drawImage() to draw the current frame
+   - Use canvas.toDataURL() or canvas.toBlob() to get the image data
 
-2. 示例代码：
+2. Example code:
    async function extractLastFrameClient(videoUrl: string): Promise<string> {
      return new Promise((resolve, reject) => {
        const video = document.createElement('video');
@@ -275,9 +275,9 @@ export function getClientExtractionInstructions(): string {
      });
    }
 
-3. 注意事项：
-   - 视频需要支持 CORS（crossOrigin = 'anonymous'）
-   - 对于某些视频格式，可能需要编解码器支持
-   - 移动端浏览器可能有兼容性问题
+3. Notes:
+   - The video must support CORS (crossOrigin = 'anonymous')
+   - Some video formats may require codec support
+   - Mobile browsers may have compatibility issues
 `;
 }

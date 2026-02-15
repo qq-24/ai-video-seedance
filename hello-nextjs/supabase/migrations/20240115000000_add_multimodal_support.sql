@@ -1,13 +1,19 @@
--- 添加 scene_mode 枚举类型
-CREATE TYPE scene_mode AS ('story', 'free');
+-- Add scene_mode enum type
+DO $$ BEGIN
+    CREATE TYPE scene_mode AS ENUM ('story', 'free');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
--- 为 scenes 表添加 mode 字段
+-- Add mode field to scenes table
 ALTER TABLE scenes ADD COLUMN IF NOT EXISTS mode scene_mode DEFAULT 'story';
 
--- 添加 material_type 枚举类型
-CREATE TYPE material_type AS ('audio', 'video', 'image', 'text');
+-- Add material_type enum type
+DO $$ BEGIN
+    CREATE TYPE material_type AS ENUM ('audio', 'video', 'image', 'text');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
--- 创建 materials 表
+-- Create materials table
 CREATE TABLE IF NOT EXISTS materials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     scene_id UUID NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
@@ -19,7 +25,7 @@ CREATE TABLE IF NOT EXISTS materials (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 创建 video_chains 表
+-- Create video_chains table
 CREATE TABLE IF NOT EXISTS video_chains (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -27,7 +33,7 @@ CREATE TABLE IF NOT EXISTS video_chains (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 创建 video_chain_items 表
+-- Create video_chain_items table
 CREATE TABLE IF NOT EXISTS video_chain_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chain_id UUID NOT NULL REFERENCES video_chains(id) ON DELETE CASCADE,
@@ -37,19 +43,19 @@ CREATE TABLE IF NOT EXISTS video_chain_items (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 添加索引
+-- Add indexes
 CREATE INDEX IF NOT EXISTS idx_materials_scene_id ON materials(scene_id);
 CREATE INDEX IF NOT EXISTS idx_materials_type ON materials(type);
 CREATE INDEX IF NOT EXISTS idx_video_chains_project_id ON video_chains(project_id);
 CREATE INDEX IF NOT EXISTS idx_video_chain_items_chain_id ON video_chain_items(chain_id);
 CREATE INDEX IF NOT EXISTS idx_video_chain_items_video_id ON video_chain_items(video_id);
 
--- 添加 RLS 策略 (Row Level Security)
+-- Enable RLS (Row Level Security)
 ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE video_chains ENABLE ROW LEVEL SECURITY;
 ALTER TABLE video_chain_items ENABLE ROW LEVEL SECURITY;
 
--- Materials RLS 策略
+-- Materials RLS policies
 CREATE POLICY "Users can view materials in their scenes" ON materials
     FOR SELECT USING (
         scene_id IN (SELECT id FROM scenes WHERE project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()))
@@ -70,7 +76,7 @@ CREATE POLICY "Users can delete materials in their scenes" ON materials
         scene_id IN (SELECT id FROM scenes WHERE project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()))
     );
 
--- Video Chains RLS 策略
+-- Video Chains RLS policies
 CREATE POLICY "Users can view video chains in their projects" ON video_chains
     FOR SELECT USING (
         project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
@@ -91,7 +97,7 @@ CREATE POLICY "Users can delete video chains in their projects" ON video_chains
         project_id IN (SELECT id FROM projects WHERE user_id = auth.uid())
     );
 
--- Video Chain Items RLS 策略
+-- Video Chain Items RLS policies
 CREATE POLICY "Users can view video chain items in their chains" ON video_chain_items
     FOR SELECT USING (
         chain_id IN (SELECT id FROM video_chains WHERE project_id IN (SELECT id FROM projects WHERE user_id = auth.uid()))

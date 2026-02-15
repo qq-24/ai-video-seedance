@@ -44,10 +44,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                我的项目
+                My Projects
               </h1>
               <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-                共 {total} 个项目
+                {total} projects total
               </p>
             </div>
             <Link
@@ -67,7 +67,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              创建新项目
+              Create New Project
             </Link>
           </div>
 
@@ -88,7 +88,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                       href={`/projects?page=${currentPage - 1}`}
                       className="flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
-                      上一页
+                      Previous
                     </Link>
                   )}
 
@@ -103,7 +103,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                       href={`/projects?page=${currentPage + 1}`}
                       className="flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
                     >
-                      下一页
+                      Next
                     </Link>
                   )}
                 </div>
@@ -128,10 +128,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 </svg>
               </div>
               <h2 className="mb-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                还没有项目
+                No Projects Yet
               </h2>
               <p className="mb-6 text-center text-zinc-600 dark:text-zinc-400">
-                创建您的第一个项目，开始将故事转换为视频
+                Create your first project and start turning stories into videos
               </p>
               <Link
                 href="/create"
@@ -150,7 +150,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                创建新项目
+                Create New Project
               </Link>
             </div>
           )}

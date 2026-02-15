@@ -11,7 +11,7 @@ interface Params {
 
 /**
  * GET /api/materials/:id
- * 获取单个素材详情
+ * Get a single material's details
  */
 export async function GET(request: Request, { params }: Params) {
   try {
@@ -67,7 +67,7 @@ export async function GET(request: Request, { params }: Params) {
 
 /**
  * PATCH /api/materials/:id
- * 更新素材信息（如 order_index）
+ * Update material information (e.g. order_index)
  */
 export async function PATCH(request: Request, { params }: Params) {
   try {

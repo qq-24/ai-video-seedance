@@ -1,59 +1,59 @@
 # Checklist
 
-## 数据库架构
+## Database Architecture
 
-- [ ] `materials` 表类型定义正确，包含 id, scene_id, type, storage_path, url, metadata, order_index, created_at 字段
-- [ ] `video_chains` 表类型定义正确，包含 id, project_id, scenes_order, created_at 字段
-- [ ] `scenes` 表新增 `mode` 字段，支持 'story' 和 'free' 两种模式
-- [ ] `scene_materials` 关联表正确定义场景与素材的多对多关系
+- [ ] `materials` table type definition is correct, containing id, scene_id, type, storage_path, url, metadata, order_index, created_at fields
+- [ ] `video_chains` table type definition is correct, containing id, project_id, scenes_order, created_at fields
+- [ ] `scenes` table has new `mode` field, supporting 'story' and 'free' modes
+- [ ] `scene_materials` junction table correctly defines many-to-many relationship between scenes and materials
 
-## 素材上传功能
+## Material Upload Functionality
 
-- [ ] 素材上传 API 支持音频、视频、图片、文字四种类型
-- [ ] 文件上传有类型验证和大小限制
-- [ ] 上传成功后文件存储到 Supabase Storage
-- [ ] 数据库正确记录素材信息
+- [ ] Material upload API supports four types: audio, video, image, text
+- [ ] File upload has type validation and size limits
+- [ ] After successful upload, files are stored in Supabase Storage
+- [ ] Database correctly records material information
 
-## 素材管理功能
+## Material Management Functionality
 
-- [ ] 素材可以正确关联到场景
-- [ ] 素材可以从场景中移除
-- [ ] 素材删除时同时删除存储文件
-- [ ] 素材排序功能正常工作
+- [ ] Materials can be correctly associated with scenes
+- [ ] Materials can be removed from scenes
+- [ ] When materials are deleted, storage files are also deleted
+- [ ] Material sorting functionality works correctly
 
-## 素材临时生成
+## On-the-fly Material Generation
 
-- [ ] 临时生成图片功能正常，生成的图片关联到场景
-- [ ] 临时生成文字描述功能正常
-- [ ] 自然语言输入能正确识别生成意图
-- [ ] 意图识别结果能正确路由到对应生成 API
+- [ ] On-the-fly image generation works correctly, generated images are associated with scenes
+- [ ] On-the-fly text description generation works correctly
+- [ ] Natural language input correctly identifies generation intent
+- [ ] Intent recognition results correctly route to corresponding generation APIs
 
-## 首尾帧接续功能
+## Head-to-Tail Frame Continuation Feature
 
-- [ ] 能正确提取视频的最后一帧
-- [ ] 提取的帧能作为新视频的首帧输入
-- [ ] 视频链能正确记录接续关系
-- [ ] 视频链预览能显示完整拼接效果
-- [ ] 可以重新生成链中任意片段
+- [ ] Can correctly extract the last frame of a video
+- [ ] Extracted frame can be used as first frame input for new video
+- [ ] Video chain correctly records continuation relationships
+- [ ] Video chain preview can display complete concatenated result
+- [ ] Any segment in the chain can be regenerated
 
-## 前端组件
+## Frontend Components
 
-- [ ] 项目模式选择器正确显示两种模式选项
-- [ ] 素材面板正确显示场景关联的所有素材
-- [ ] 素材卡片显示类型图标和预览
-- [ ] 素材上传组件支持拖拽上传
-- [ ] 自然语言输入框有良好的交互体验
-- [ ] 视频链组件正确显示接续关系
-- [ ] 接续生成按钮功能正常
+- [ ] Project mode selector correctly displays both mode options
+- [ ] Material panel correctly displays all materials associated with a scene
+- [ ] Material cards display type icons and previews
+- [ ] Material upload component supports drag-and-drop upload
+- [ ] Natural language input box has good interactive experience
+- [ ] Video chain component correctly displays continuation relationships
+- [ ] Continue generation button works correctly
 
-## 模式切换
+## Mode Switching
 
-- [ ] 故事模式保持原有工作流不变
-- [ ] 自由模式允许手动创建场景和添加素材
-- [ ] 两种模式的项目都能正常完成整个流程
+- [ ] Story mode maintains the original workflow unchanged
+- [ ] Free mode allows manual scene creation and material adding
+- [ ] Projects in both modes can complete the entire workflow
 
-## 兼容性
+## Compatibility
 
-- [ ] 现有项目数据不受影响
-- [ ] 现有 API 保持向后兼容
-- [ ] 现有前端组件在无新功能时正常工作
+- [ ] Existing project data is not affected
+- [ ] Existing APIs maintain backward compatibility
+- [ ] Existing frontend components work correctly without new features

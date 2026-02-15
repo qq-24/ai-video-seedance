@@ -40,11 +40,11 @@ export default function ProjectError({ error, reset }: ErrorProps) {
           </div>
 
           <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            加载项目失败
+            Failed to Load Project
           </h1>
 
           <p className="mb-6 text-zinc-600 dark:text-zinc-400">
-            无法加载该项目。可能是项目不存在或您没有访问权限。
+            Unable to load this project. The project may not exist or you may not have access.
           </p>
 
           {error.message && (
@@ -58,13 +58,13 @@ export default function ProjectError({ error, reset }: ErrorProps) {
               onClick={reset}
               className="rounded-lg bg-zinc-900 px-6 py-3 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              重试
+              Retry
             </button>
             <Link
               href="/projects"
               className="rounded-lg border border-zinc-300 bg-white px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              返回项目列表
+              Back to Projects
             </Link>
           </div>
         </div>

@@ -9,7 +9,7 @@ import type { Material } from "@/types/database";
 
 /**
  * GET /api/materials?sceneId=xxx
- * 获取场景的所有素材
+ * Get all materials for a scene
  */
 export async function GET(request: NextRequest) {
   try {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * DELETE /api/materials
- * 删除素材（同时删除 Supabase Storage 中的文件）
+ * Delete a material (also deletes the file from Supabase Storage)
  */
 export async function DELETE(request: NextRequest) {
   try {
