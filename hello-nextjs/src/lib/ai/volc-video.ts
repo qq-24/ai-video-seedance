@@ -112,6 +112,11 @@ export async function createVideoTask(
   options: {
     duration?: number;
     watermark?: boolean;
+    materials?: Array<{
+      type: "image" | "video" | "text";
+      url?: string;
+      content?: string;
+    }>;
   } = {}
 ): Promise<VideoTaskResult> {
   if (!isVolcVideoConfigured()) {
@@ -123,20 +128,45 @@ export async function createVideoTask(
   const watermark = options.watermark ?? false;
   const fullPrompt = `${prompt ?? ""} --duration ${duration} --camerafixed false --watermark ${watermark}`;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const content: any[] = [
+    {
+      type: "text",
+      text: fullPrompt,
+    },
+    {
+      type: "image_url",
+      image_url: {
+        url: imageUrl,
+      },
+    },
+  ];
+
+  // Add materials to the content array for multi-modal generation
+  if (options.materials && options.materials.length > 0) {
+    for (const material of options.materials) {
+      if (material.type === "image" && material.url) {
+        content.push({
+          type: "image_url",
+          image_url: { url: material.url },
+        });
+      } else if (material.type === "video" && material.url) {
+        content.push({
+          type: "video_url",
+          video_url: { url: material.url },
+        });
+      } else if (material.type === "text" && material.content) {
+        const textEntry = content.find((c) => c.type === "text");
+        if (textEntry) {
+          textEntry.text += "\n" + material.content;
+        }
+      }
+    }
+  }
+
   const requestBody = {
     model: DEFAULT_MODEL,
-    content: [
-      {
-        type: "text",
-        text: fullPrompt,
-      },
-      {
-        type: "image_url",
-        image_url: {
-          url: imageUrl,
-        },
-      },
-    ],
+    content,
   };
 
   const controller = new AbortController();

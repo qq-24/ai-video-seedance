@@ -13,6 +13,7 @@ import {
   isVolcVideoConfigured,
   VolcVideoApiError,
 } from "@/lib/ai/volc-video";
+import { getMaterialsBySceneId } from "@/lib/db/materials";
 
 interface RouteParams {
   params: Promise<{ sceneId: string }>;
@@ -90,6 +91,28 @@ export async function POST(request: Request, { params }: RouteParams) {
     // This ensures the video API can access the image even from private bucket
     const imageUrl = await getSignedUrl(latestImage.storage_path, 3600);
 
+    // Fetch materials for free mode scenes
+    const materials: Array<{ type: "image" | "video" | "text"; url?: string; content?: string }> = [];
+    if (scene.mode === "free") {
+      const sceneMaterials = await getMaterialsBySceneId(sceneId);
+      for (const mat of sceneMaterials) {
+        if (mat.type === "image" && mat.storage_path) {
+          const matUrl = await getSignedUrl(mat.storage_path, 3600);
+          materials.push({ type: "image", url: matUrl });
+        } else if (mat.type === "video" && mat.storage_path) {
+          const matUrl = await getSignedUrl(mat.storage_path, 3600);
+          materials.push({ type: "video", url: matUrl });
+        } else if (mat.type === "text" && mat.metadata) {
+          const content = typeof mat.metadata === "object" && mat.metadata !== null && "content" in mat.metadata
+            ? String((mat.metadata as Record<string, unknown>).content)
+            : "";
+          if (content) {
+            materials.push({ type: "text", content });
+          }
+        }
+      }
+    }
+
     // Update scene video status to processing
     await updateSceneVideoStatus(sceneId, "processing");
 
@@ -101,6 +124,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         {
           duration: 5,
           watermark: false,
+          materials,
         }
       );
 

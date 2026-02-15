@@ -4,6 +4,7 @@ import { DraftStageView } from "@/components/scene/DraftStageView";
 import { SceneDescriptionList } from "@/components/scene/SceneDescriptionList";
 import { SceneImageList } from "@/components/scene/SceneImageList";
 import { SceneVideoList } from "@/components/scene/SceneVideoList";
+import { FreeSceneList } from "@/components/scene/FreeSceneList";
 import { CompletedProjectView } from "@/components/scene/CompletedProjectView";
 import { createClient } from "@/lib/supabase/server";
 import { getProjectById } from "@/lib/db/projects";
@@ -37,26 +38,29 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
+  const freeScenes = project.scenes.filter((s) => s.mode === "free");
+  const storyScenes = project.scenes.filter((s) => s.mode !== "free");
+
   const styleNames: Record<string, string> = {
-    realistic: "写实风格",
-    anime: "动漫风格",
-    cartoon: "卡通风格",
-    cinematic: "电影风格",
-    watercolor: "水彩风格",
-    oil_painting: "油画风格",
-    sketch: "素描风格",
-    cyberpunk: "赛博朋克",
-    fantasy: "奇幻风格",
-    scifi: "科幻风格",
+    realistic: "Realistic",
+    anime: "Anime",
+    cartoon: "Cartoon",
+    cinematic: "Cinematic",
+    watercolor: "Watercolor",
+    oil_painting: "Oil Painting",
+    sketch: "Sketch",
+    cyberpunk: "Cyberpunk",
+    fantasy: "Fantasy",
+    scifi: "Sci-Fi",
   };
 
-  const createdDate = new Date(project.created_at).toLocaleDateString("zh-CN", {
+  const createdDate = new Date(project.created_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  const updatedDate = new Date(project.updated_at).toLocaleDateString("zh-CN", {
+  const updatedDate = new Date(project.updated_at).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -86,7 +90,7 @@ export default async function ProjectDetailPage({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              返回项目列表
+              Back to Projects
             </Link>
           </div>
 
@@ -103,15 +107,15 @@ export default async function ProjectDetailPage({
                       {styleNames[project.style] ?? project.style}
                     </span>
                   )}
-                  <span>{project.scenes.length} 个分镜</span>
+                  <span>{project.scenes.length} scenes</span>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                  编辑项目
+                  Edit Project
                 </button>
                 <button className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-900/20">
-                  删除项目
+                  Delete Project
                 </button>
               </div>
             </div>
@@ -120,7 +124,7 @@ export default async function ProjectDetailPage({
             {project.story && (
               <div className="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800/50">
                 <h3 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  故事内容
+                  Story Content
                 </h3>
                 <p className="text-zinc-600 dark:text-zinc-400">
                   {project.story}
@@ -130,15 +134,15 @@ export default async function ProjectDetailPage({
 
             {/* Meta info */}
             <div className="mt-4 flex gap-6 text-sm text-zinc-500 dark:text-zinc-400">
-              <span>创建于 {createdDate}</span>
-              <span>更新于 {updatedDate}</span>
+              <span>Created on {createdDate}</span>
+              <span>Updated on {updatedDate}</span>
             </div>
           </div>
 
           {/* Stage Indicator */}
           <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              项目进度
+              Project Progress
             </h2>
             <StageIndicator currentStage={project.stage} />
           </div>
@@ -146,11 +150,11 @@ export default async function ProjectDetailPage({
           {/* Content based on stage */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              {project.stage === "draft" && "开始创作"}
-              {project.stage === "scenes" && "分镜描述"}
-              {project.stage === "images" && "图片生成"}
-              {project.stage === "videos" && "视频生成"}
-              {project.stage === "completed" && "项目完成"}
+              {project.stage === "draft" && "Start Creating"}
+              {project.stage === "scenes" && "Scene Descriptions"}
+              {project.stage === "images" && "Image Generation"}
+              {project.stage === "videos" && "Video Generation"}
+              {project.stage === "completed" && "Project Completed"}
             </h2>
 
             {project.stage === "draft" && (
@@ -160,21 +164,21 @@ export default async function ProjectDetailPage({
             {project.stage === "scenes" && (
               <SceneDescriptionList
                 projectId={project.id}
-                scenes={project.scenes}
+                scenes={storyScenes}
               />
             )}
 
             {project.stage === "images" && (
               <SceneImageList
                 projectId={project.id}
-                scenes={project.scenes}
+                scenes={storyScenes}
               />
             )}
 
             {project.stage === "videos" && (
               <SceneVideoList
                 projectId={project.id}
-                scenes={project.scenes}
+                scenes={storyScenes}
               />
             )}
 
@@ -185,6 +189,19 @@ export default async function ProjectDetailPage({
               />
             )}
           </div>
+
+          {/* Free Mode Section */}
+          {freeScenes.length > 0 && (
+            <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Free Mode Scenes
+              </h2>
+              <FreeSceneList
+                projectId={project.id}
+                scenes={freeScenes}
+              />
+            </div>
+          )}
         </div>
       </main>
     </div>
