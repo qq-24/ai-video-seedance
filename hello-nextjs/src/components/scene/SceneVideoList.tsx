@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { SceneVideoCard } from "./SceneVideoCard";
 import { useSignedUrls } from "@/hooks/useSignedUrls";
-import type { Scene, Image as ImageType, Video } from "@/types/database";
+import type { Scene, Image as ImageType, Video, Material } from "@/types/database";
 
 type SceneWithMedia = Scene & { images: ImageType[]; videos: Video[] };
 
@@ -20,6 +20,37 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
   const [localScenes, setLocalScenes] = useState(scenes);
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
+  const [ratio, setRatio] = useState("16:9");
+  const [duration, setDuration] = useState(5);
+  const [sceneMaterials, setSceneMaterials] = useState<Record<string, Material[]>>({});
+
+  // Fetch materials for all scenes
+  const fetchMaterials = useCallback(async (sceneId?: string) => {
+    const sceneIds = sceneId ? [sceneId] : localScenes.map((s) => s.id);
+    const results: Record<string, Material[]> = {};
+
+    await Promise.all(
+      sceneIds.map(async (id) => {
+        try {
+          const res = await fetch(`/api/materials?sceneId=${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            results[id] = data.materials ?? [];
+          }
+        } catch {
+          // Silently fail - materials are optional
+        }
+      })
+    );
+
+    setSceneMaterials((prev) => ({ ...prev, ...results }));
+  }, [localScenes]);
+
+  // Fetch materials on mount
+  useEffect(() => {
+    fetchMaterials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Resume polling for any videos that are still processing when component mounts
   useEffect(() => {
@@ -65,7 +96,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ projectId }),
+      body: JSON.stringify({ projectId, ratio, duration }),
     });
 
     if (!response.ok) {
@@ -180,7 +211,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({ projectId, ratio, duration }),
       });
 
       if (!response.ok) {
@@ -247,6 +278,47 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         </div>
       </div>
 
+      {/* Video Settings */}
+      {!allConfirmed && (
+        <div className="flex flex-wrap items-center gap-4 rounded-lg bg-zinc-800 px-4 py-2">
+          <div className="flex items-center gap-2">
+            <label htmlFor="ratio-select" className="text-xs text-zinc-400">
+              Aspect Ratio
+            </label>
+            <select
+              id="ratio-select"
+              value={ratio}
+              onChange={(e) => setRatio(e.target.value)}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none"
+            >
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+              <option value="1:1">1:1</option>
+              <option value="4:3">4:3</option>
+              <option value="3:4">3:4</option>
+              <option value="21:9">21:9</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="duration-input" className="text-xs text-zinc-400">
+              Duration (s)
+            </label>
+            <input
+              id="duration-input"
+              type="number"
+              min={4}
+              max={15}
+              value={duration}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 4 && v <= 15) setDuration(v);
+              }}
+              className="w-14 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Generate All Button */}
       {!allConfirmed && (
         <div className="flex gap-3">
@@ -291,8 +363,10 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
               scene={scene}
               signedImageUrl={signedImageUrl}
               signedVideoUrl={signedVideoUrl}
+              materials={sceneMaterials[scene.id] ?? []}
               onGenerate={handleGenerateVideo}
               onConfirm={handleConfirmVideo}
+              onMaterialsChange={(sceneId) => fetchMaterials(sceneId)}
             />
           );
         })}

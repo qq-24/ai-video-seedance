@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Get request body for projectId
     const body = await request.json().catch(() => ({}));
-    const { projectId } = body;
+    const { projectId, ratio, duration } = body;
 
     if (!projectId || typeof projectId !== "string") {
       return NextResponse.json(
@@ -91,24 +91,25 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Uses temp public host for local Supabase, signed URL for cloud
     const imageUrl = await getPublicImageUrl(latestImage.storage_path, 3600);
 
-    // Fetch materials for free mode scenes
-    const materials: Array<{ type: "image" | "video" | "text"; url?: string; content?: string }> = [];
-    if (scene.mode === "free") {
-      const sceneMaterials = await getMaterialsBySceneId(sceneId);
-      for (const mat of sceneMaterials) {
-        if (mat.type === "image" && mat.storage_path) {
-          const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
-          materials.push({ type: "image", url: matUrl });
-        } else if (mat.type === "video" && mat.storage_path) {
-          const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
-          materials.push({ type: "video", url: matUrl });
-        } else if (mat.type === "text" && mat.metadata) {
-          const content = typeof mat.metadata === "object" && mat.metadata !== null && "content" in mat.metadata
-            ? String((mat.metadata as Record<string, unknown>).content)
-            : "";
-          if (content) {
-            materials.push({ type: "text", content });
-          }
+    // Fetch materials for the scene
+    const materials: Array<{ type: "image" | "video" | "audio" | "text"; url?: string; content?: string }> = [];
+    const sceneMaterials = await getMaterialsBySceneId(sceneId);
+    for (const mat of sceneMaterials) {
+      if (mat.type === "image" && mat.storage_path) {
+        const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
+        materials.push({ type: "image", url: matUrl });
+      } else if (mat.type === "video" && mat.storage_path) {
+        const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
+        materials.push({ type: "video", url: matUrl });
+      } else if (mat.type === "audio" && mat.storage_path) {
+        const matUrl = await getPublicImageUrl(mat.storage_path, 3600);
+        materials.push({ type: "audio", url: matUrl });
+      } else if (mat.type === "text" && mat.metadata) {
+        const content = typeof mat.metadata === "object" && mat.metadata !== null && "content" in mat.metadata
+          ? String((mat.metadata as Record<string, unknown>).content)
+          : "";
+        if (content) {
+          materials.push({ type: "text", content });
         }
       }
     }
@@ -122,7 +123,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         imageUrl,
         scene.description,
         {
-          duration: 5,
+          duration: duration ?? 5,
+          ratio: ratio ?? "16:9",
           watermark: false,
           materials,
         }

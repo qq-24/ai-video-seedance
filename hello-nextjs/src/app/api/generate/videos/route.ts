@@ -33,11 +33,13 @@ async function createSceneVideoTask(
   sceneId: string,
   orderIndex: number,
   description: string,
-  imageUrl: string
+  imageUrl: string,
+  options?: { ratio?: string; duration?: number }
 ): Promise<VideoTaskResult> {
   try {
     const task = await createVideoTask(imageUrl, description, {
-      duration: 5,
+      duration: options?.duration ?? 5,
+      ratio: options?.ratio ?? "16:9",
       watermark: false,
     });
 
@@ -92,7 +94,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { projectId } = body;
+    const { projectId, ratio, duration } = body;
 
     if (!projectId || typeof projectId !== "string") {
       return NextResponse.json(
@@ -155,7 +157,8 @@ export async function POST(request: Request) {
         scene.id,
         scene.order_index,
         scene.description,
-        imageUrl
+        imageUrl,
+        { ratio, duration }
       );
       results.push(result);
     }

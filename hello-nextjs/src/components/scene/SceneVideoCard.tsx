@@ -2,24 +2,27 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { Scene, Image as ImageType, Video } from "@/types/database";
+import ReferenceUploader from "./ReferenceUploader";
+import type { Scene, Image as ImageType, Video, Material } from "@/types/database";
 
 interface SceneVideoCardProps {
   scene: Scene & { images: ImageType[]; videos: Video[] };
   signedImageUrl?: string; // Signed URL for the image
   signedVideoUrl?: string; // Signed URL for the video
+  materials: Material[];
   onGenerate: (sceneId: string) => Promise<void>;
   onConfirm: (sceneId: string) => Promise<void>;
+  onMaterialsChange: (sceneId: string) => void;
 }
 
 /**
  * Status display configuration
  */
 const statusConfig = {
-  pending: { label: "等待生成", className: "bg-zinc-100 text-zinc-600" },
-  processing: { label: "生成中", className: "bg-blue-100 text-blue-700" },
-  completed: { label: "已完成", className: "bg-green-100 text-green-700" },
-  failed: { label: "生成失败", className: "bg-red-100 text-red-700" },
+  pending: { label: "Pending", className: "bg-zinc-100 text-zinc-600" },
+  processing: { label: "Generating", className: "bg-blue-100 text-blue-700" },
+  completed: { label: "Completed", className: "bg-green-100 text-green-700" },
+  failed: { label: "Generation Failed", className: "bg-red-100 text-red-700" },
 };
 
 /**
@@ -30,8 +33,10 @@ export function SceneVideoCard({
   scene,
   signedImageUrl,
   signedVideoUrl,
+  materials,
   onGenerate,
   onConfirm,
+  onMaterialsChange,
 }: SceneVideoCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -85,7 +90,7 @@ export function SceneVideoCard({
         ) : imageUrl ? (
           <Image
             src={imageUrl}
-            alt={`分镜 ${scene.order_index + 1}`}
+            alt={`Scene ${scene.order_index + 1}`}
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -114,7 +119,7 @@ export function SceneVideoCard({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                <span className="text-sm text-zinc-500">生成中...</span>
+                <span className="text-sm text-zinc-500">Generating...</span>
               </div>
             ) : (
               <svg
@@ -169,6 +174,17 @@ export function SceneVideoCard({
           {scene.description}
         </p>
 
+        {/* Reference Materials */}
+        {!scene.video_confirmed && (
+          <div className="mb-3">
+            <ReferenceUploader
+              sceneId={scene.id}
+              materials={materials}
+              onMaterialsChange={() => onMaterialsChange(scene.id)}
+            />
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex items-center justify-between gap-2">
           {!scene.video_confirmed && (
@@ -201,7 +217,7 @@ export function SceneVideoCard({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      生成中...
+                      Generating...
                     </>
                   ) : (
                     <>
@@ -218,7 +234,7 @@ export function SceneVideoCard({
                           d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                         />
                       </svg>
-                      {scene.video_status === "failed" ? "重新生成" : "生成视频"}
+                      {scene.video_status === "failed" ? "Regenerate" : "Generate Video"}
                     </>
                   )}
                 </button>
@@ -252,7 +268,7 @@ export function SceneVideoCard({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      确认中...
+                      Confirming...
                     </>
                   ) : (
                     <>
@@ -269,7 +285,7 @@ export function SceneVideoCard({
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      确认
+                      Confirm
                     </>
                   )}
                 </button>
@@ -297,7 +313,7 @@ export function SceneVideoCard({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  生成中...
+                  Generating...
                 </div>
               )}
             </>
@@ -319,7 +335,7 @@ export function SceneVideoCard({
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              已确认
+              Confirmed
             </div>
           )}
         </div>

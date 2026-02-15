@@ -114,9 +114,10 @@ export async function createVideoTask(
   prompt?: string,
   options: {
     duration?: number;
+    ratio?: string;
     watermark?: boolean;
     materials?: Array<{
-      type: "image" | "video" | "text";
+      type: "image" | "video" | "audio" | "text";
       url?: string;
       content?: string;
     }>;
@@ -127,10 +128,12 @@ export async function createVideoTask(
   }
 
   const duration = options.duration ?? 5;
+  const ratio = options.ratio ?? "16:9";
 
   // Determine function mode based on materials
   const hasVideoMaterials = options.materials?.some((m) => m.type === "video" && m.url);
   const hasExtraImageMaterials = options.materials?.some((m) => m.type === "image" && m.url);
+  const hasAudioMaterials = options.materials?.some((m) => m.type === "audio" && m.url);
 
   // Build prompt text, incorporating text materials
   let fullPrompt = prompt ?? "";
@@ -145,10 +148,11 @@ export async function createVideoTask(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let params: any;
 
-  if (hasVideoMaterials || hasExtraImageMaterials) {
+  if (hasVideoMaterials || hasExtraImageMaterials || hasAudioMaterials) {
     // Use omni_reference mode for multi-modal input
     const imageFiles = [imageUrl];
     const videoFiles: string[] = [];
+    const audioFiles: string[] = [];
 
     if (options.materials) {
       for (const mat of options.materials) {
@@ -156,6 +160,8 @@ export async function createVideoTask(
           imageFiles.push(mat.url);
         } else if (mat.type === "video" && mat.url) {
           videoFiles.push(mat.url);
+        } else if (mat.type === "audio" && mat.url) {
+          audioFiles.push(mat.url);
         }
       }
     }
@@ -165,6 +171,9 @@ export async function createVideoTask(
     if (videoFiles.length > 0) {
       refPrompt = `@image_file_1 按照 @video_file_1 的动作和运镜风格进行表演，${fullPrompt}`;
     }
+    if (audioFiles.length > 0) {
+      refPrompt += ` 配合 @audio_file_1 的节奏`;
+    }
 
     params = {
       model: DEFAULT_SEEDANCE_MODEL,
@@ -172,7 +181,8 @@ export async function createVideoTask(
       functionMode: "omni_reference",
       image_files: imageFiles,
       ...(videoFiles.length > 0 ? { video_files: videoFiles } : {}),
-      ratio: "16:9",
+      ...(audioFiles.length > 0 ? { audio_files: audioFiles } : {}),
+      ratio,
       duration,
     };
   } else {
@@ -182,7 +192,7 @@ export async function createVideoTask(
       prompt: fullPrompt,
       functionMode: "first_last_frames",
       filePaths: [imageUrl],
-      ratio: "16:9",
+      ratio,
       duration,
     };
   }
