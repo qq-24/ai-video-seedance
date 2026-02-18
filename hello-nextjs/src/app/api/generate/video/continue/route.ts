@@ -7,9 +7,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getSceneById, updateSceneVideoStatus } from "@/lib/db/scenes";
-import { getProjectById } from "@/lib/db/projects";
+import { getProjectById, isProjectOwner } from "@/lib/db/projects";
 import {
   getVideoById,
   createProcessingVideo,
@@ -26,6 +25,8 @@ import {
   getVideoChainByVideoId,
   createVideoChain,
 } from "@/lib/db/video-chains";
+import { getLatestMaterialBySceneId } from "@/lib/db/materials";
+import { getSession } from "@/lib/auth/session";
 
 interface ContinueVideoRequest {
   sceneId: string;
@@ -47,12 +48,8 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
   console.log(`${logPrefix} Starting continue video generation`);
 
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.warn(`${logPrefix} Unauthorized access attempt`);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -92,15 +89,21 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
     }
 
     const scene = await getSceneById(sceneId);
-    console.log(`${logPrefix} Found scene:`, scene.id, "project:", scene.project_id);
+    console.log(`${logPrefix} Found scene:`, scene.id, "project:", scene.projectId);
 
-    const project = await getProjectById(scene.project_id, user.id);
+    const project = await getProjectById(scene.projectId);
     console.log(`${logPrefix} Verified project ownership:`, project.id);
 
-    const parentVideo = await getVideoById(parentVideoId);
-    console.log(`${logPrefix} Found parent video:`, parentVideo.id, "scene:", parentVideo.scene_id);
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
+      console.warn(`${logPrefix} Unauthorized access to project`);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (parentVideo.scene_id !== sceneId) {
+    const parentVideo = await getVideoById(parentVideoId);
+    console.log(`${logPrefix} Found parent video:`, parentVideo.id, "scene:", parentVideo.sceneId);
+
+    if (parentVideo.sceneId !== sceneId) {
       console.warn(`${logPrefix} Parent video does not belong to scene`);
       return NextResponse.json(
         { error: "Parent video does not belong to this scene" },
@@ -108,7 +111,7 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
       );
     }
 
-    if (!parentVideo.url && !parentVideo.storage_path) {
+    if (!parentVideo.url && !parentVideo.storagePath) {
       console.error(`${logPrefix} Parent video has no URL or storage path`);
       return NextResponse.json(
         { error: "Parent video is not yet completed or has no valid URL" },
@@ -123,16 +126,9 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
       firstFrameUrl = lastFrameUrl;
     } else {
       console.log(`${logPrefix} Looking for last frame in materials table`);
-      const { data: lastFrameMaterial, error: materialError } = await supabase
-        .from("materials")
-        .select("*")
-        .eq("scene_id", sceneId)
-        .eq("type", "image")
-        .order("order_index", { ascending: false })
-        .limit(1)
-        .single();
+      const lastFrameMaterial = await getLatestMaterialBySceneId(sceneId, "image");
 
-      if (materialError || !lastFrameMaterial) {
+      if (!lastFrameMaterial) {
         console.log(`${logPrefix} No last frame material found, checking for latest image`);
         const latestImage = await getLatestImageBySceneId(sceneId);
 
@@ -145,10 +141,10 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
         }
 
         console.log(`${logPrefix} Using latest image as first frame`);
-        firstFrameUrl = await getSignedUrl(latestImage.storage_path, 3600);
+        firstFrameUrl = await getSignedUrl(latestImage.storagePath);
       } else {
         console.log(`${logPrefix} Found last frame material:`, lastFrameMaterial.id);
-        firstFrameUrl = await getSignedUrl(lastFrameMaterial.storage_path, 3600);
+        firstFrameUrl = await getSignedUrl(lastFrameMaterial.storagePath);
       }
     }
 
@@ -183,9 +179,9 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
       const existingChainItem = await getVideoChainByVideoId(parentVideoId);
 
       if (existingChainItem) {
-        console.log(`${logPrefix} Parent video is in chain:`, existingChainItem.chain_id);
+        console.log(`${logPrefix} Parent video is in chain:`, existingChainItem.chainId);
         const chainItem = await appendVideoToChain(
-          existingChainItem.chain_id,
+          existingChainItem.chainId,
           videoId,
           parentVideoId
         );
@@ -194,8 +190,8 @@ export async function POST(request: Request): Promise<NextResponse<ContinueVideo
       } else {
         console.log(`${logPrefix} Creating new video chain for project:`, project.id);
         const newChain = await createVideoChain({
-          project_id: project.id,
-          name: `Chain for scene ${scene.order_index + 1}`,
+          projectId: project.id,
+          name: `Chain for scene ${scene.orderIndex + 1}`,
         });
         console.log(`${logPrefix} New chain created:`, newChain.id);
 

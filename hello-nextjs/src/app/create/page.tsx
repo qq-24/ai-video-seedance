@@ -1,22 +1,19 @@
 import { Header } from "@/components/layout/Header";
 import { CreateProjectForm } from "@/components/project/CreateProjectForm";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 export default async function CreatePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
   // This page is protected by middleware, but we also check here for safety
-  if (!user) {
+  if (!session.isLoggedIn) {
     redirect("/login");
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <Header user={user} />
+      <Header />
       <main className="flex flex-1 flex-col px-4 py-8">
         <div className="mx-auto w-full max-w-3xl">
           {/* Header */}

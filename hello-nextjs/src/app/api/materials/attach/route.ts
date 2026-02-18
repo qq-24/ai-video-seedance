@@ -1,6 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { getMaterialById, updateMaterial } from "@/lib/db/materials";
+import { getMaterialById, updateMaterial, getMaterialsBySceneId } from "@/lib/db/materials";
+import { getSceneById } from "@/lib/db/scenes";
+import { isProjectOwner } from "@/lib/db/projects";
+import { getSession } from "@/lib/auth/session";
+import type { Material } from "@prisma/client";
 
 /**
  * POST /api/materials/attach
@@ -10,12 +13,8 @@ export async function POST(request: Request) {
   try {
     console.log("[POST /api/materials/attach] Starting request");
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.log("[POST /api/materials/attach] Unauthorized - no user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -33,19 +32,15 @@ export async function POST(request: Request) {
 
     console.log("[POST /api/materials/attach] Attaching material:", materialId, "to scene:", sceneId);
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", sceneId)
-      .single();
+    const scene = await getSceneById(sceneId);
 
-    if (sceneError || !scene) {
+    if (!scene) {
       console.log("[POST /api/materials/attach] Scene not found:", sceneId);
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       console.log("[POST /api/materials/attach] Forbidden - user does not own scene");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -57,7 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Material not found" }, { status: 404 });
     }
 
-    if (material.scene_id === sceneId) {
+    if (material.sceneId === sceneId) {
       console.log("[POST /api/materials/attach] Material already attached to this scene");
       return NextResponse.json({
         material,
@@ -65,24 +60,12 @@ export async function POST(request: Request) {
       });
     }
 
-    const { data: existingMaterials, error: countError } = await supabase
-      .from("materials")
-      .select("id")
-      .eq("scene_id", sceneId);
-
-    if (countError) {
-      console.error("[POST /api/materials/attach] Error counting existing materials:", countError);
-      return NextResponse.json(
-        { error: "Failed to get existing materials" },
-        { status: 500 }
-      );
-    }
-
-    const nextOrderIndex = existingMaterials?.length ?? 0;
+    const existingMaterials = await getMaterialsBySceneId(sceneId);
+    const nextOrderIndex = existingMaterials.length;
 
     const updatedMaterial = await updateMaterial(materialId, {
-      scene_id: sceneId,
-      order_index: nextOrderIndex,
+      sceneId,
+      orderIndex: nextOrderIndex,
     });
 
     console.log("[POST /api/materials/attach] Material attached successfully");

@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { getProjectById, updateProjectStage } from "@/lib/db/projects";
 import {
   createScenes,
@@ -24,12 +24,9 @@ import {
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -52,7 +49,7 @@ export async function POST(request: Request) {
     }
 
     // Get the project and verify ownership
-    const project = await getProjectById(projectId, user.id);
+    const project = await getProjectById(projectId);
 
     if (!project.story) {
       return NextResponse.json(
@@ -64,7 +61,7 @@ export async function POST(request: Request) {
     // Get existing scenes for reference (before deletion)
     const existingScenes = await getScenesByProjectId(projectId);
     const previousSceneDescriptions = existingScenes.map((scene) => ({
-      order_index: scene.order_index,
+      order_index: scene.orderIndex,
       description: scene.description,
     }));
 
@@ -90,7 +87,7 @@ export async function POST(request: Request) {
     const newScenes = await createScenes(projectId, sceneDescriptions);
 
     // Ensure project stage is 'scenes'
-    await updateProjectStage(projectId, user.id, "scenes");
+    await updateProjectStage(projectId, "scenes");
 
     return NextResponse.json({
       success: true,

@@ -1,10 +1,4 @@
-/**
- * Scene generation API routes.
- * POST /api/generate/scenes - Generate scenes from a project's story
- */
-
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getProjectById, updateProjectStage } from "@/lib/db/projects";
 import {
   createScenes,
@@ -15,24 +9,14 @@ import {
   isZhipuConfigured,
   ZhipuApiError,
 } from "@/lib/ai/zhipu";
+import { isLoggedIn } from "@/lib/auth";
 
-/**
- * POST /api/generate/scenes - Generate scenes from a project's story
- * Body: { projectId: string }
- * Returns: { scenes: Scene[] }
- */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!(await isLoggedIn())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if Zhipu AI is configured
     if (!isZhipuConfigured()) {
       return NextResponse.json(
         { error: "AI service is not configured. Please set ZHIPU_API_KEY." },
@@ -50,8 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the project and verify ownership
-    const project = await getProjectById(projectId, user.id);
+    const project = await getProjectById(projectId);
 
     if (!project.story) {
       return NextResponse.json(
@@ -60,7 +43,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate scenes using Zhipu AI
     const sceneDescriptions = await storyToScenes(project.story, project.style ?? undefined);
 
     if (sceneDescriptions.length === 0) {
@@ -70,14 +52,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Delete existing scenes if any (for regeneration)
     await deleteScenesByProjectId(projectId);
 
-    // Create new scenes in the database
     const newScenes = await createScenes(projectId, sceneDescriptions);
 
-    // Update project stage to 'scenes'
-    await updateProjectStage(projectId, user.id, "scenes");
+    await updateProjectStage(projectId, "scenes");
 
     return NextResponse.json({
       success: true,
@@ -87,7 +66,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error generating scenes:", error);
 
-    // Handle specific errors
     if (error instanceof ZhipuApiError) {
       return NextResponse.json(
         { error: `AI service error: ${error.message}` },
@@ -95,7 +73,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle project not found error
     if (error instanceof Error && error.message.includes("not found")) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }

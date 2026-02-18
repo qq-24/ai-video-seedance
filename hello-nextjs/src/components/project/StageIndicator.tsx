@@ -1,8 +1,5 @@
 import type { project_stage } from "@/types/database";
 
-/**
- * Stage configuration for display
- */
 const STAGES: {
   id: project_stage;
   label: string;
@@ -16,18 +13,14 @@ const STAGES: {
 ];
 
 interface StageIndicatorProps {
-  currentStage: project_stage;
+  currentStage: project_stage | string;
 }
 
-/**
- * Stage indicator component showing project progress.
- */
 export function StageIndicator({ currentStage }: StageIndicatorProps) {
   const currentIndex = STAGES.findIndex((s) => s.id === currentStage);
 
   return (
     <div className="w-full">
-      {/* Desktop view */}
       <div className="hidden items-center justify-between sm:flex">
         {STAGES.map((stage, index) => {
           const isCompleted = index < currentIndex;
@@ -36,7 +29,6 @@ export function StageIndicator({ currentStage }: StageIndicatorProps) {
 
           return (
             <div key={stage.id} className="flex flex-1 items-center">
-              {/* Stage circle */}
               <div className="flex flex-col items-center">
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${
@@ -83,7 +75,6 @@ export function StageIndicator({ currentStage }: StageIndicatorProps) {
                 </div>
               </div>
 
-              {/* Connector line */}
               {!isLast && (
                 <div
                   className={`mx-2 h-0.5 flex-1 rounded-full ${
@@ -98,7 +89,6 @@ export function StageIndicator({ currentStage }: StageIndicatorProps) {
         })}
       </div>
 
-      {/* Mobile view */}
       <div className="sm:hidden">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">

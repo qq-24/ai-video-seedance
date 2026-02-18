@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { confirmAllDescriptions, SceneError } from "@/lib/db/scenes";
 import { isProjectOwner } from "@/lib/db/projects";
 
@@ -15,12 +15,8 @@ import { isProjectOwner } from "@/lib/db/projects";
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -35,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     // Verify user owns the project
-    const isOwner = await isProjectOwner(projectId, user.id);
+    const isOwner = await isProjectOwner(projectId, "local-user");
     if (!isOwner) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

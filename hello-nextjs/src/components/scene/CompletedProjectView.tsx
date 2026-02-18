@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { useSignedUrls } from "@/hooks/useSignedUrls";
-import type { Scene, Image as ImageType, Video } from "@/types/database";
+import type { Scene, Image as ImageType, Video } from "@prisma/client";
 
 type SceneWithMedia = Scene & { images: ImageType[]; videos: Video[] };
 
@@ -28,11 +28,11 @@ export function CompletedProjectView({
   const storagePaths = useMemo(() => {
     const paths: string[] = [];
     scenes.forEach((scene) => {
-      if (scene.images[0]?.storage_path) {
-        paths.push(scene.images[0].storage_path);
+      if (scene.images[0]?.storagePath) {
+        paths.push(scene.images[0].storagePath);
       }
-      if (scene.videos[0]?.storage_path) {
-        paths.push(scene.videos[0].storage_path);
+      if (scene.videos[0]?.storagePath) {
+        paths.push(scene.videos[0].storagePath);
       }
     });
     return paths;
@@ -56,7 +56,7 @@ export function CompletedProjectView({
   });
 
   const handleDownload = (video: Video, sceneIndex: number) => {
-    const downloadUrl = getSignedUrl(video.storage_path) ?? video.url;
+    const downloadUrl = getSignedUrl(video.storagePath) ?? video.url;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = `scene-${sceneIndex + 1}.mp4`;
@@ -69,7 +69,7 @@ export function CompletedProjectView({
     for (const scene of scenes) {
       const video = scene.videos[0];
       if (video) {
-        handleDownload(video, scene.order_index);
+        handleDownload(video, scene.orderIndex);
         // Small delay between downloads
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
@@ -132,7 +132,7 @@ export function CompletedProjectView({
           <div className="aspect-video w-full bg-black">
             <video
               key={selectedScene.videos[0].id}
-              src={getSignedUrl(selectedScene.videos[0].storage_path) ?? selectedScene.videos[0].url}
+              src={getSignedUrl(selectedScene.videos[0].storagePath) ?? selectedScene.videos[0].url}
               className="h-full w-full"
               controls
               autoPlay
@@ -141,10 +141,10 @@ export function CompletedProjectView({
           <div className="p-4">
             <div className="mb-2 flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                {selectedScene.order_index + 1}
+                {selectedScene.orderIndex + 1}
               </span>
               <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                分镜 {selectedScene.order_index + 1}
+                分镜 {selectedScene.orderIndex + 1}
               </span>
             </div>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -152,7 +152,7 @@ export function CompletedProjectView({
             </p>
             <button
               onClick={() =>
-                handleDownload(selectedScene.videos[0], selectedScene.order_index)
+                handleDownload(selectedScene.videos[0], selectedScene.orderIndex)
               }
               className="mt-3 flex items-center gap-1.5 text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             >
@@ -181,8 +181,8 @@ export function CompletedProjectView({
           const video = scene.videos[0];
           const image = scene.images[0];
           const isSelected = selectedScene?.id === scene.id;
-          const videoUrl = video ? (getSignedUrl(video.storage_path) ?? video.url) : undefined;
-          const imageUrl = image ? (getSignedUrl(image.storage_path) ?? image.url) : undefined;
+          const videoUrl = video ? (getSignedUrl(video.storagePath) ?? video.url) : undefined;
+          const imageUrl = image ? (getSignedUrl(image.storagePath) ?? image.url) : undefined;
 
           return (
             <button
@@ -203,7 +203,7 @@ export function CompletedProjectView({
               ) : imageUrl ? (
                 <Image
                   src={imageUrl}
-                  alt={`分镜 ${scene.order_index + 1}`}
+                  alt={`分镜 ${scene.orderIndex + 1}`}
                   fill
                   className="object-cover"
                   sizes="150px"
@@ -212,7 +212,7 @@ export function CompletedProjectView({
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
                   <span className="text-xs text-zinc-400">
-                    {scene.order_index + 1}
+                    {scene.orderIndex + 1}
                   </span>
                 </div>
               )}
@@ -232,7 +232,7 @@ export function CompletedProjectView({
                 </div>
               </div>
               <div className="absolute bottom-1 left-1 flex h-5 w-5 items-center justify-center rounded bg-black/50 text-xs font-medium text-white">
-                {scene.order_index + 1}
+                {scene.orderIndex + 1}
               </div>
             </button>
           );
@@ -255,7 +255,7 @@ export function CompletedProjectView({
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-xs font-medium text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
-                    {scene.order_index + 1}
+                    {scene.orderIndex + 1}
                   </span>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">
                     {scene.description}
@@ -263,7 +263,7 @@ export function CompletedProjectView({
                 </div>
                 {video && (
                   <button
-                    onClick={() => handleDownload(video, scene.order_index)}
+                    onClick={() => handleDownload(video, scene.orderIndex)}
                     className="flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
                   >
                     <svg

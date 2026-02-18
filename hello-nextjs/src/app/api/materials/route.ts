@@ -1,11 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getMaterialsBySceneId,
   deleteMaterial,
   getMaterialById,
 } from "@/lib/db/materials";
-import type { Material } from "@/types/database";
+import { getSceneById } from "@/lib/db/scenes";
+import { isProjectOwner } from "@/lib/db/projects";
+import { deleteFile } from "@/lib/db/media";
+import { getSession } from "@/lib/auth/session";
+import type { Material } from "@prisma/client";
 
 /**
  * GET /api/materials?sceneId=xxx
@@ -15,12 +18,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log("[GET /api/materials] Starting request");
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.log("[GET /api/materials] Unauthorized - no user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -38,19 +37,15 @@ export async function GET(request: NextRequest) {
 
     console.log("[GET /api/materials] Fetching materials for scene:", sceneId);
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", sceneId)
-      .single();
+    const scene = await getSceneById(sceneId);
 
-    if (sceneError || !scene) {
+    if (!scene) {
       console.log("[GET /api/materials] Scene not found:", sceneId);
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       console.log("[GET /api/materials] Forbidden - user does not own scene");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -70,18 +65,14 @@ export async function GET(request: NextRequest) {
 
 /**
  * DELETE /api/materials
- * 删除素材（同时删除 Supabase Storage 中的文件）
+ * 删除素材（同时删除本地存储中的文件）
  */
 export async function DELETE(request: NextRequest) {
   try {
     console.log("[DELETE /api/materials] Starting request");
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.log("[DELETE /api/materials] Unauthorized - no user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -106,34 +97,27 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Material not found" }, { status: 404 });
     }
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", material.scene_id)
-      .single();
+    const scene = await getSceneById(material.sceneId);
 
-    if (sceneError || !scene) {
+    if (!scene) {
       console.log("[DELETE /api/materials] Scene not found for material");
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       console.log("[DELETE /api/materials] Forbidden - user does not own material");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const storagePath = material.storage_path;
+    const storagePath = material.storagePath;
     console.log("[DELETE /api/materials] Storage path to delete:", storagePath);
 
-    const { error: storageError } = await supabase.storage
-      .from("materials")
-      .remove([storagePath]);
-
-    if (storageError) {
-      console.error("[DELETE /api/materials] Error deleting from storage:", storageError);
-    } else {
+    try {
+      await deleteFile(storagePath);
       console.log("[DELETE /api/materials] Successfully deleted from storage");
+    } catch (storageError) {
+      console.error("[DELETE /api/materials] Error deleting from storage:", storageError);
     }
 
     await deleteMaterial(materialId);

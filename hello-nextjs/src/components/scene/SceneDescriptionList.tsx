@@ -2,17 +2,13 @@
 
 import { useState } from "react";
 import { SceneDescriptionCard } from "./SceneDescriptionCard";
-import type { Scene } from "@/types/database";
+import type { Scene } from "@prisma/client";
 
 interface SceneDescriptionListProps {
   projectId: string;
   scenes: Scene[];
 }
 
-/**
- * Scene description list component.
- * Displays all scenes with bulk actions.
- */
 export function SceneDescriptionList({
   projectId,
   scenes,
@@ -22,7 +18,7 @@ export function SceneDescriptionList({
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
 
   const confirmedCount = localScenes.filter(
-    (s) => s.description_confirmed
+    (s) => s.descriptionConfirmed
   ).length;
   const allConfirmed = confirmedCount === localScenes.length;
 
@@ -37,7 +33,7 @@ export function SceneDescriptionList({
 
     setLocalScenes((prev) =>
       prev.map((s) =>
-        s.id === sceneId ? { ...s, description_confirmed: true } : s
+        s.id === sceneId ? { ...s, descriptionConfirmed: true } : s
       )
     );
   };
@@ -77,7 +73,6 @@ export function SceneDescriptionList({
         throw new Error("Failed to confirm all scenes");
       }
 
-      // Refresh the page to show the next stage (images)
       window.location.reload();
     } catch (error) {
       console.error("Failed to confirm all scenes:", error);
@@ -115,7 +110,6 @@ export function SceneDescriptionList({
 
   return (
     <div className="space-y-4">
-      {/* Progress */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -129,7 +123,6 @@ export function SceneDescriptionList({
         </div>
       </div>
 
-      {/* Scene Cards */}
       <div className="space-y-3">
         {localScenes.map((scene) => (
           <SceneDescriptionCard
@@ -141,7 +134,6 @@ export function SceneDescriptionList({
         ))}
       </div>
 
-      {/* Actions */}
       <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800 sm:flex-row sm:justify-between">
         <button
           onClick={handleRegenerate}

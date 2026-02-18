@@ -47,7 +47,7 @@ async function checkFfmpegAvailable(): Promise<boolean> {
 
   try {
     console.log("[FrameExtractor] Checking ffmpeg availability...");
-    const { stdout, stderr } = await execAsync("ffmpeg -version", {
+    const { stdout } = await execAsync("ffmpeg -version", {
       timeout: 5000,
     });
     ffmpegAvailable = true;
@@ -94,7 +94,7 @@ async function extractLastFrameWithFfmpeg(videoPath: string): Promise<Buffer> {
   console.log("[FrameExtractor] Extracting last frame from:", videoPath);
 
   try {
-    const { stdout, stderr } = await execAsync(
+    const { stderr } = await execAsync(
       `ffmpeg -y -sseof -0.1 -i "${videoPath}" -frames:v 1 -q:v 2 "${outputPath}"`,
       {
         timeout: FFMPEG_TIMEOUT_MS,
@@ -133,18 +133,16 @@ async function extractLastFrameWithFfmpeg(videoPath: string): Promise<Buffer> {
 
 async function uploadFrameToStorage(
   frameBuffer: Buffer,
-  userId: string,
+  _userId: string,
   sceneId: string
 ): Promise<string> {
-  const { uploadFile } = await import("@/lib/db/media");
+  const { uploadFile } = await import("@/lib/storage");
 
   const fileName = `last_frame_${sceneId}_${Date.now()}.png`;
 
   console.log("[FrameExtractor] Uploading frame to storage:", fileName);
 
-  const { url } = await uploadFile(userId, sceneId, fileName, frameBuffer, {
-    contentType: "image/png",
-  });
+  const { url } = await uploadFile("images" as any, fileName, frameBuffer);
 
   console.log("[FrameExtractor] Frame uploaded, URL:", url);
   return url;

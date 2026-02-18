@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import {
   getVideoTaskStatus,
   isVolcVideoConfigured,
@@ -13,9 +13,10 @@ import {
 } from "@/lib/ai/volc-video";
 import {
   updateCompletedVideo,
-  uploadFile,
 } from "@/lib/db/media";
+import { uploadFile } from "@/lib/storage";
 import { updateSceneVideoStatus } from "@/lib/db/scenes";
+import type { StorageBucket } from "@/lib/storage";
 
 interface RouteParams {
   params: Promise<{ taskId: string }>;
@@ -29,12 +30,8 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { taskId } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -65,11 +62,9 @@ export async function GET(request: Request, { params }: RouteParams) {
         const timestamp = Date.now();
         const fileName = `video-${taskId}-${timestamp}.mp4`;
         const { path, url } = await uploadFile(
-          user.id,
-          projectId,
+          "videos" as StorageBucket,
           fileName,
-          videoBuffer,
-          { contentType: "video/mp4" }
+          videoBuffer
         );
 
         // Update existing video record with completed data

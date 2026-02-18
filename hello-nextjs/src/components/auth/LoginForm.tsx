@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,14 +16,16 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
 
-      if (error) {
-        setError(getErrorMessage(error.message));
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "登录失败，请重试");
         setIsLoading(false);
         return;
       }
@@ -40,19 +39,6 @@ export function LoginForm() {
     }
   };
 
-  const getErrorMessage = (message: string): string => {
-    switch (message) {
-      case "Invalid login credentials":
-        return "邮箱或密码错误";
-      case "Email not confirmed":
-        return "请先验证您的邮箱";
-      case "Too many requests":
-        return "请求过于频繁，请稍后重试";
-      default:
-        return message || "登录失败，请重试";
-    }
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -63,30 +49,10 @@ export function LoginForm() {
 
       <div>
         <label
-          htmlFor="email"
-          className="block text-sm font-medium text-gray-700"
-        >
-          邮箱
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请输入邮箱"
-        />
-      </div>
-
-      <div>
-        <label
           htmlFor="password"
           className="block text-sm font-medium text-gray-700"
         >
-          密码
+          访问密码
         </label>
         <input
           id="password"
@@ -97,7 +63,7 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          placeholder="请输入密码"
+          placeholder="请输入访问密码"
         />
       </div>
 
@@ -115,13 +81,7 @@ export function LoginForm() {
       </button>
 
       <p className="text-center text-sm text-gray-600">
-        还没有账号？{" "}
-        <Link
-          href="/register"
-          className="font-medium text-indigo-600 hover:text-indigo-500"
-        >
-          立即注册
-        </Link>
+        单用户本地模式 - 无需注册账号
       </p>
     </form>
   );

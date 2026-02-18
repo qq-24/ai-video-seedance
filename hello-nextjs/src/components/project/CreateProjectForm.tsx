@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VideoStyle } from "@/types/ai";
+import { ModeSelector } from "./ModeSelector";
+import type { scene_mode } from "@/types/database";
 
 /**
  * Available style options for video generation
@@ -69,6 +71,7 @@ export function CreateProjectForm() {
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
   const [style, setStyle] = useState<VideoStyle>("realistic");
+  const [mode, setMode] = useState<scene_mode>("story");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +84,7 @@ export function CreateProjectForm() {
       return;
     }
 
-    if (!story.trim()) {
+    if (mode === "story" && !story.trim()) {
       setError("请输入故事内容");
       return;
     }
@@ -96,8 +99,9 @@ export function CreateProjectForm() {
         },
         body: JSON.stringify({
           title: title.trim(),
-          story: story.trim(),
+          story: mode === "story" ? story.trim() : null,
           style,
+          mode,
         }),
       });
 
@@ -137,27 +141,41 @@ export function CreateProjectForm() {
         />
       </div>
 
-      {/* Story Input */}
+      {/* Mode Selector */}
       <div>
-        <label
-          htmlFor="story"
-          className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          故事内容
+        <label className="mb-3 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          创作模式
         </label>
-        <textarea
-          id="story"
-          value={story}
-          onChange={(e) => setStory(e.target.value)}
-          placeholder="描述您想要转换成视频的故事...&#10;&#10;例如：一只小猫在公园里追逐蝴蝶，最后累得躺在草地上睡着了。"
-          rows={6}
-          className="w-full resize-none rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
+        <ModeSelector
+          value={mode}
+          onChange={setMode}
           disabled={isSubmitting}
         />
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          AI 将自动分析您的故事，拆解成多个分镜场景
-        </p>
       </div>
+
+      {/* Story Input - Only show in story mode */}
+      {mode === "story" && (
+        <div>
+          <label
+            htmlFor="story"
+            className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          >
+            故事内容
+          </label>
+          <textarea
+            id="story"
+            value={story}
+            onChange={(e) => setStory(e.target.value)}
+            placeholder="描述您想要转换成视频的故事...&#10;&#10;例如：一只小猫在公园里追逐蝴蝶，最后累得躺在草地上睡着了。"
+            rows={6}
+            className="w-full resize-none rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
+            disabled={isSubmitting}
+          />
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            AI 将自动分析您的故事，拆解成多个分镜场景
+          </p>
+        </div>
+      )}
 
       {/* Style Selector */}
       <div>

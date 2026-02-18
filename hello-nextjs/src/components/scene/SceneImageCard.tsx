@@ -2,29 +2,22 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import type { Scene, Image as ImageType } from "@/types/database";
+import type { Scene, Image as ImageType } from "@prisma/client";
 
 interface SceneImageCardProps {
   scene: Scene & { images: ImageType[] };
-  signedUrl?: string; // Signed URL for the latest image
+  signedUrl?: string;
   onGenerate: (sceneId: string) => Promise<void>;
   onConfirm: (sceneId: string) => Promise<void>;
 }
 
-/**
- * Status display configuration
- */
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: "等待生成", className: "bg-zinc-100 text-zinc-600" },
   processing: { label: "生成中", className: "bg-blue-100 text-blue-700" },
   completed: { label: "已完成", className: "bg-green-100 text-green-700" },
   failed: { label: "生成失败", className: "bg-red-100 text-red-700" },
 };
 
-/**
- * Scene image card component.
- * Displays a scene's image with generation and confirmation functionality.
- */
 export function SceneImageCard({
   scene,
   signedUrl,
@@ -34,11 +27,11 @@ export function SceneImageCard({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const latestImage = scene.images[0]; // Images are sorted by version desc
-  const imageUrl = signedUrl ?? latestImage?.url; // Use signed URL if available
-  const status = statusConfig[scene.image_status];
-  const canGenerate = scene.description_confirmed;
-  const canConfirm = scene.image_status === "completed" && !scene.image_confirmed;
+  const latestImage = scene.images[0];
+  const imageUrl = signedUrl ?? latestImage?.url;
+  const status = statusConfig[scene.imageStatus] || statusConfig.pending;
+  const canGenerate = scene.descriptionConfirmed;
+  const canConfirm = scene.imageStatus === "completed" && !scene.imageConfirmed;
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -65,17 +58,16 @@ export function SceneImageCard({
   return (
     <div
       className={`overflow-hidden rounded-xl border transition-colors ${
-        scene.image_confirmed
+        scene.imageConfirmed
           ? "border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-900/20"
           : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
       }`}
     >
-      {/* Image Preview */}
       <div className="relative aspect-video w-full bg-zinc-100 dark:bg-zinc-800">
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={`分镜 ${scene.order_index + 1}`}
+            alt={`分镜 ${scene.orderIndex + 1}`}
             fill
             className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -83,7 +75,7 @@ export function SceneImageCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            {scene.image_status === "processing" ? (
+            {scene.imageStatus === "processing" ? (
               <div className="flex flex-col items-center gap-2">
                 <svg
                   className="h-8 w-8 animate-spin text-zinc-400"
@@ -124,32 +116,26 @@ export function SceneImageCard({
           </div>
         )}
 
-        {/* Status Badge */}
         <div
           className={`absolute right-2 top-2 rounded-full px-2.5 py-1 text-xs font-medium ${status.className}`}
         >
           {status.label}
         </div>
 
-        {/* Scene Number */}
         <div className="absolute bottom-2 left-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-xs font-medium text-white">
-          {scene.order_index + 1}
+          {scene.orderIndex + 1}
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4">
-        {/* Description */}
         <p className="mb-3 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
           {scene.description}
         </p>
 
-        {/* Actions */}
         <div className="flex items-center justify-between gap-2">
-          {!scene.image_confirmed && (
+          {!scene.imageConfirmed && (
             <>
-              {/* Generate/Regenerate Button */}
-              {(scene.image_status === "pending" || scene.image_status === "failed") && (
+              {(scene.imageStatus === "pending" || scene.imageStatus === "failed") && (
                 <button
                   onClick={handleGenerate}
                   disabled={isGenerating || !canGenerate}
@@ -193,13 +179,12 @@ export function SceneImageCard({
                           d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      {scene.image_status === "failed" ? "重新生成" : "生成图片"}
+                      {scene.imageStatus === "failed" ? "重新生成" : "生成图片"}
                     </>
                   )}
                 </button>
               )}
 
-              {/* Confirm Button */}
               {canConfirm && (
                 <button
                   onClick={handleConfirm}
@@ -250,8 +235,7 @@ export function SceneImageCard({
                 </button>
               )}
 
-              {/* Processing State */}
-              {scene.image_status === "processing" && (
+              {scene.imageStatus === "processing" && (
                 <div className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                   <svg
                     className="h-4 w-4 animate-spin"
@@ -278,8 +262,7 @@ export function SceneImageCard({
             </>
           )}
 
-          {/* Confirmed State */}
-          {scene.image_confirmed && (
+          {scene.imageConfirmed && (
             <div className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-green-100 px-3 py-2 text-sm font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
               <svg
                 className="h-4 w-4"

@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { getSceneById, updateSceneVideoStatus } from "@/lib/db/scenes";
 import { getProjectById } from "@/lib/db/projects";
 import { getLatestImageBySceneId, createProcessingVideo, getSignedUrl } from "@/lib/db/media";
@@ -26,12 +26,9 @@ interface RouteParams {
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { sceneId } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -55,13 +52,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify project ownership
-    await getProjectById(projectId, user.id);
+    await getProjectById(projectId);
 
     // Get the scene
     const scene = await getSceneById(sceneId);
 
     // Verify scene belongs to the project
-    if (scene.project_id !== projectId) {
+    if (scene.projectId !== projectId) {
       return NextResponse.json(
         { error: "Scene does not belong to this project" },
         { status: 400 }
@@ -69,7 +66,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Check if scene image is completed
-    if (scene.image_status !== "completed") {
+    if (scene.imageStatus !== "completed") {
       return NextResponse.json(
         { error: "Scene image must be completed before generating video" },
         { status: 400 }
@@ -86,9 +83,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Generate a fresh signed URL for the image (valid for 1 hour)
-    // This ensures the video API can access the image even from private bucket
-    const imageUrl = await getSignedUrl(latestImage.storage_path, 3600);
+    // Generate a fresh URL for the image
+    const imageUrl = getSignedUrl(latestImage.storagePath);
 
     // Update scene video status to processing
     await updateSceneVideoStatus(sceneId, "processing");
@@ -104,8 +100,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         }
       );
 
-      // Create a video record in the database with task_id
-      // This allows frontend to find the task_id even after page refresh
+      // Create a video record in the database with taskId
+      // This allows frontend to find the taskId even after page refresh
       const video = await createProcessingVideo(sceneId, task.taskId);
 
       return NextResponse.json({

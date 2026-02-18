@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { confirmAllVideos, SceneError } from "@/lib/db/scenes";
 import { isProjectOwner, updateProjectStage, ProjectError } from "@/lib/db/projects";
 
@@ -15,12 +15,9 @@ import { isProjectOwner, updateProjectStage, ProjectError } from "@/lib/db/proje
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -34,8 +31,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify user owns the project
-    const isOwner = await isProjectOwner(projectId, user.id);
+    // Verify user owns the project (single user mode - always true)
+    const isOwner = await isProjectOwner(projectId);
     if (!isOwner) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
@@ -44,7 +41,7 @@ export async function POST(request: Request) {
     const count = await confirmAllVideos(projectId);
 
     // Update project stage to 'completed'
-    await updateProjectStage(projectId, user.id, "completed");
+    await updateProjectStage(projectId, "completed");
 
     return NextResponse.json({ count, stage: "completed" });
   } catch (error) {
@@ -56,9 +53,6 @@ export async function POST(request: Request) {
     if (error instanceof ProjectError) {
       if (error.code === "not_found") {
         return NextResponse.json({ error: "Project not found" }, { status: 404 });
-      }
-      if (error.code === "unauthorized") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
     }
     console.error("Error confirming all videos:", error);

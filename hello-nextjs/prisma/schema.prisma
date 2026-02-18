@@ -1,0 +1,120 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  story       String?
+  style       String?
+  stage       String   @default("draft")
+  mode        String   @default("story")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  scenes      Scene[]
+  videoChains VideoChain[]
+
+  @@map("projects")
+}
+
+model Scene {
+  id                   String   @id @default(uuid())
+  projectId            String   @map("project_id")
+  orderIndex           Int      @map("order_index")
+  description          String
+  descriptionConfirmed Boolean  @default(false) @map("description_confirmed")
+  imageStatus          String   @default("pending") @map("image_status")
+  imageConfirmed       Boolean  @default(false) @map("image_confirmed")
+  videoStatus          String   @default("pending") @map("video_status")
+  videoConfirmed       Boolean  @default(false) @map("video_confirmed")
+  createdAt            DateTime @default(now()) @map("created_at")
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  images               Image[]
+  videos               Video[]
+  materials            Material[]
+
+  @@map("scenes")
+}
+
+model Image {
+  id          String   @id @default(uuid())
+  sceneId     String   @map("scene_id")
+  storagePath String   @map("storage_path")
+  url         String
+  width       Int?
+  height      Int?
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@map("images")
+}
+
+model Video {
+  id          String   @id @default(uuid())
+  sceneId     String   @map("scene_id")
+  storagePath String   @map("storage_path")
+  url         String
+  duration    Float?
+  taskId      String?  @map("task_id")
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  chainItems  VideoChainItem[]
+  parentItems VideoChainItem[] @relation("ParentVideo")
+
+  @@map("videos")
+}
+
+model Material {
+  id          String   @id @default(uuid())
+  sceneId     String   @map("scene_id")
+  type        String
+  storagePath String   @map("storage_path")
+  url         String
+  metadata    String?
+  orderIndex  Int      @default(0) @map("order_index")
+  createdAt   DateTime @default(now()) @map("created_at")
+  scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+model VideoChain {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items     VideoChainItem[]
+
+  @@map("video_chains")
+}
+
+model VideoChainItem {
+  id            String   @id @default(uuid())
+  chainId       String   @map("chain_id")
+  videoId       String   @map("video_id")
+  orderIndex    Int      @default(0) @map("order_index")
+  parentVideoId String?  @map("parent_video_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  chain         VideoChain @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  video         Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  parentVideo   Video?   @relation("ParentVideo", fields: [parentVideoId], references: [id], onDelete: SetNull)
+
+  @@map("video_chain_items")
+}
+
+model Setting {
+  id        String   @id @default("app")
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}

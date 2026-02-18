@@ -1,48 +1,46 @@
-import { createClient } from "@/lib/supabase/middleware";
 import { type NextRequest, NextResponse } from "next/server";
+import { getIronSession } from "iron-session";
 
-/**
- * Middleware for handling Supabase session refresh and auth protection.
- *
- * Protected routes:
- * - /projects/*
- * - /create/*
- *
- * Public routes:
- * - /login
- * - /register
- * - / (home)
- * - /api/*
- */
+interface SessionData {
+  isLoggedIn: boolean;
+}
+
+const SESSION_SECRET = process.env.SESSION_SECRET || "super-secret-key-change-in-production-at-least-32-chars";
+const SESSION_NAME = "video-gen-session";
+
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = await createClient(request);
-
-  // Refresh session if expired - required for Server Components
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
   const { pathname } = request.nextUrl;
 
-  // Protected routes that require authentication
+  const response = NextResponse.next();
+
+  const session = await getIronSession<SessionData>(request, response, {
+    password: SESSION_SECRET,
+    cookieName: SESSION_NAME,
+    cookieOptions: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7,
+      httpOnly: true,
+      sameSite: "lax",
+    },
+  });
+
+  const isLoggedIn = session.isLoggedIn === true;
+
   const protectedRoutes = ["/projects", "/create"];
   const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route),
+    pathname.startsWith(route)
   );
 
-  // Auth routes that should redirect to home if already logged in
   const authRoutes = ["/login", "/register"];
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
-  // If trying to access protected route without session, redirect to login
-  if (isProtectedRoute && !session) {
+  if (isProtectedRoute && !isLoggedIn) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If trying to access auth routes with session, redirect to home
-  if (isAuthRoute && session) {
+  if (isAuthRoute && isLoggedIn) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -51,13 +49,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm|mp3|wav)$).*)",
   ],
 };

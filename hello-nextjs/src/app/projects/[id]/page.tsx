@@ -5,8 +5,8 @@ import { SceneDescriptionList } from "@/components/scene/SceneDescriptionList";
 import { SceneImageList } from "@/components/scene/SceneImageList";
 import { SceneVideoList } from "@/components/scene/SceneVideoList";
 import { CompletedProjectView } from "@/components/scene/CompletedProjectView";
-import { createClient } from "@/lib/supabase/server";
 import { getProjectById } from "@/lib/db/projects";
+import { isLoggedIn } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -19,12 +19,7 @@ interface ProjectDetailPageProps {
 export default async function ProjectDetailPage({
   params,
 }: ProjectDetailPageProps) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!(await isLoggedIn())) {
     redirect("/login");
   }
 
@@ -32,7 +27,7 @@ export default async function ProjectDetailPage({
 
   let project;
   try {
-    project = await getProjectById(id, user.id);
+    project = await getProjectById(id);
   } catch {
     notFound();
   }
@@ -50,13 +45,13 @@ export default async function ProjectDetailPage({
     scifi: "科幻风格",
   };
 
-  const createdDate = new Date(project.created_at).toLocaleDateString("zh-CN", {
+  const createdDate = new Date(project.createdAt).toLocaleDateString("zh-CN", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  const updatedDate = new Date(project.updated_at).toLocaleDateString("zh-CN", {
+  const updatedDate = new Date(project.updatedAt).toLocaleDateString("zh-CN", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -64,10 +59,9 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <Header user={user} />
+      <Header />
       <main className="flex flex-1 flex-col px-4 py-8">
         <div className="mx-auto w-full max-w-4xl">
-          {/* Breadcrumb */}
           <div className="mb-6">
             <Link
               href="/projects"
@@ -90,7 +84,6 @@ export default async function ProjectDetailPage({
             </Link>
           </div>
 
-          {/* Project Header */}
           <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -116,7 +109,6 @@ export default async function ProjectDetailPage({
               </div>
             </div>
 
-            {/* Story */}
             {project.story && (
               <div className="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800/50">
                 <h3 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -128,14 +120,12 @@ export default async function ProjectDetailPage({
               </div>
             )}
 
-            {/* Meta info */}
             <div className="mt-4 flex gap-6 text-sm text-zinc-500 dark:text-zinc-400">
               <span>创建于 {createdDate}</span>
               <span>更新于 {updatedDate}</span>
             </div>
           </div>
 
-          {/* Stage Indicator */}
           <div className="mb-8 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               项目进度
@@ -143,7 +133,6 @@ export default async function ProjectDetailPage({
             <StageIndicator currentStage={project.stage} />
           </div>
 
-          {/* Content based on stage */}
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               {project.stage === "draft" && "开始创作"}
@@ -181,7 +170,7 @@ export default async function ProjectDetailPage({
             {project.stage === "completed" && (
               <CompletedProjectView
                 scenes={project.scenes}
-                completedAt={project.updated_at}
+                completedAt={project.updatedAt.toISOString()}
               />
             )}
           </div>

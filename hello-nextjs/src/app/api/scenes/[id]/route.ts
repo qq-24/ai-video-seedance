@@ -1,6 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { updateSceneDescription } from "@/lib/db/scenes";
+import { getSession } from "@/lib/auth/session";
+import { updateSceneDescription, getSceneById } from "@/lib/db/scenes";
+import { isProjectOwner } from "@/lib/db/projects";
 
 interface Params {
   params: Promise<{
@@ -14,12 +15,8 @@ interface Params {
  */
 export async function PATCH(request: Request, { params }: Params) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -35,18 +32,13 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     // Verify user owns the scene's project
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", id)
-      .single();
-
-    if (sceneError || !scene) {
+    const scene = await getSceneById(id);
+    if (!scene) {
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

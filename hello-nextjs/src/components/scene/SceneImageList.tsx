@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { SceneImageCard } from "./SceneImageCard";
 import { useSignedUrls } from "@/hooks/useSignedUrls";
-import type { Scene, Image as ImageType } from "@/types/database";
+import type { Scene, Image as ImageType } from "@prisma/client";
 
 type SceneWithImages = Scene & { images: ImageType[] };
 
@@ -12,39 +12,30 @@ interface SceneImageListProps {
   scenes: SceneWithImages[];
 }
 
-/**
- * Scene image list component.
- * Displays all scenes with their images and bulk actions.
- */
 export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
   const [localScenes, setLocalScenes] = useState(scenes);
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
 
-  // Resume polling for any images that are still processing when component mounts
   useEffect(() => {
     localScenes.forEach((scene) => {
-      if (scene.image_status === "processing") {
-        // Resume polling for this image
+      if (scene.imageStatus === "processing") {
         pollForImageCompletion(scene.id);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, []);
 
-  // Collect all storage paths for images
   const storagePaths = useMemo(() => {
     return localScenes
-      .filter((s) => s.images.length > 0 && s.images[0].storage_path)
-      .map((s) => s.images[0].storage_path);
+      .filter((s) => s.images.length > 0 && s.images[0].storagePath)
+      .map((s) => s.images[0].storagePath);
   }, [localScenes]);
 
-  // Fetch signed URLs for all images
   const { urls: signedUrls } = useSignedUrls({ paths: storagePaths });
 
-  const confirmedCount = localScenes.filter((s) => s.image_confirmed).length;
+  const confirmedCount = localScenes.filter((s) => s.imageConfirmed).length;
   const completedCount = localScenes.filter(
-    (s) => s.image_status === "completed"
+    (s) => s.imageStatus === "completed"
   ).length;
   const allConfirmed = confirmedCount === localScenes.length;
   const canConfirmAll = completedCount === localScenes.length && !allConfirmed;
@@ -59,20 +50,18 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
       throw new Error(data.error ?? "Failed to generate image");
     }
 
-    // Update local state to show processing
     setLocalScenes((prev) =>
       prev.map((s) =>
-        s.id === sceneId ? { ...s, image_status: "processing" } : s
+        s.id === sceneId ? { ...s, imageStatus: "processing" } : s
       )
     );
 
-    // Poll for completion (simple approach)
     pollForImageCompletion(sceneId);
   };
 
   const pollForImageCompletion = async (sceneId: string) => {
-    const maxAttempts = 60; // 5 minutes max
-    const interval = 5000; // 5 seconds
+    const maxAttempts = 60;
+    const interval = 5000;
 
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((resolve) => setTimeout(resolve, interval));
@@ -84,21 +73,21 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
         const { project } = await response.json();
         const scene = project.scenes.find((s: SceneWithImages) => s.id === sceneId);
 
-        if (scene?.image_status === "completed") {
+        if (scene?.imageStatus === "completed") {
           setLocalScenes((prev) =>
             prev.map((s) =>
               s.id === sceneId
-                ? { ...s, image_status: "completed", images: scene.images }
+                ? { ...s, imageStatus: "completed", images: scene.images }
                 : s
             )
           );
           return;
         }
 
-        if (scene?.image_status === "failed") {
+        if (scene?.imageStatus === "failed") {
           setLocalScenes((prev) =>
             prev.map((s) =>
-              s.id === sceneId ? { ...s, image_status: "failed" } : s
+              s.id === sceneId ? { ...s, imageStatus: "failed" } : s
             )
           );
           return;
@@ -120,7 +109,7 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
 
     setLocalScenes((prev) =>
       prev.map((s) =>
-        s.id === sceneId ? { ...s, image_confirmed: true } : s
+        s.id === sceneId ? { ...s, imageConfirmed: true } : s
       )
     );
   };
@@ -140,12 +129,11 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
         throw new Error("Failed to generate images");
       }
 
-      // Start polling for all scenes
       localScenes.forEach((scene) => {
-        if (scene.image_status === "pending") {
+        if (scene.imageStatus === "pending") {
           setLocalScenes((prev) =>
             prev.map((s) =>
-              s.id === scene.id ? { ...s, image_status: "processing" } : s
+              s.id === scene.id ? { ...s, imageStatus: "processing" } : s
             )
           );
           pollForImageCompletion(scene.id);
@@ -173,7 +161,6 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
         throw new Error("Failed to confirm all images");
       }
 
-      // Refresh the page to show the next stage (videos)
       window.location.reload();
     } catch (error) {
       console.error("Failed to confirm all images:", error);
@@ -183,7 +170,6 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Progress */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -197,7 +183,6 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
         </div>
       </div>
 
-      {/* Generate All Button */}
       {!allConfirmed && (
         <div className="flex gap-3">
           <button
@@ -223,10 +208,9 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
         </div>
       )}
 
-      {/* Scene Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {localScenes.map((scene) => {
-          const storagePath = scene.images[0]?.storage_path;
+          const storagePath = scene.images[0]?.storagePath;
           const signedUrl = storagePath ? signedUrls[storagePath] : undefined;
 
           return (
@@ -241,7 +225,6 @@ export function SceneImageList({ projectId, scenes }: SceneImageListProps) {
         })}
       </div>
 
-      {/* Confirm All Button */}
       {canConfirmAll && (
         <div className="flex justify-end border-t border-zinc-200 pt-4 dark:border-zinc-800">
           <button

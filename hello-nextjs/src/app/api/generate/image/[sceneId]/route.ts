@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { getSceneById, updateSceneImageStatus } from "@/lib/db/scenes";
 import { getProjectById } from "@/lib/db/projects";
 import {
@@ -29,12 +29,9 @@ interface RouteParams {
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { sceneId } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -58,13 +55,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Verify project ownership
-    const project = await getProjectById(projectId, user.id);
+    const project = await getProjectById(projectId);
 
     // Get the scene
     const scene = await getSceneById(sceneId);
 
     // Verify scene belongs to the project
-    if (scene.project_id !== projectId) {
+    if (scene.projectId !== projectId) {
       return NextResponse.json(
         { error: "Scene does not belong to this project" },
         { status: 400 }
@@ -72,7 +69,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Check if scene description is confirmed
-    if (!scene.description_confirmed) {
+    if (!scene.descriptionConfirmed) {
       return NextResponse.json(
         { error: "Scene description must be confirmed before generating image" },
         { status: 400 }
@@ -97,11 +94,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       // Generate filename
       const timestamp = Date.now();
-      const fileName = `scene-${scene.order_index}-${timestamp}.png`;
+      const fileName = `scene-${scene.orderIndex}-${timestamp}.png`;
 
-      // Upload to Supabase Storage and create database record
+      // Upload to local storage and create database record
       const image = await uploadAndCreateImage(
-        user.id,
+        "",
         projectId,
         sceneId,
         fileName,

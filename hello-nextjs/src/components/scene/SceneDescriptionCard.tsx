@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Scene } from "@/types/database";
+import type { Scene } from "@prisma/client";
 
 interface SceneDescriptionCardProps {
   scene: Scene;
@@ -9,10 +9,6 @@ interface SceneDescriptionCardProps {
   onUpdate: (sceneId: string, description: string) => Promise<void>;
 }
 
-/**
- * Scene description card component.
- * Displays a single scene's description with edit and confirm functionality.
- */
 export function SceneDescriptionCard({
   scene,
   onConfirm,
@@ -35,7 +31,7 @@ export function SceneDescriptionCard({
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update scene:", error);
-      setEditedDescription(scene.description); // Reset on error
+      setEditedDescription(scene.description);
     } finally {
       setIsSaving(false);
     }
@@ -60,21 +56,20 @@ export function SceneDescriptionCard({
   return (
     <div
       className={`rounded-xl border p-4 transition-colors ${
-        scene.description_confirmed
+        scene.descriptionConfirmed
           ? "border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-900/20"
           : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
       }`}
     >
-      {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-sm font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-            {scene.order_index + 1}
+            {scene.orderIndex + 1}
           </span>
           <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-            分镜 {scene.order_index + 1}
+            分镜 {scene.orderIndex + 1}
           </span>
-          {scene.description_confirmed && (
+          {scene.descriptionConfirmed && (
             <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
               <svg
                 className="h-4 w-4"
@@ -94,7 +89,7 @@ export function SceneDescriptionCard({
           )}
         </div>
 
-        {!scene.description_confirmed && !isEditing && (
+        {!scene.descriptionConfirmed && !isEditing && (
           <button
             onClick={() => setIsEditing(true)}
             className="text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -104,7 +99,6 @@ export function SceneDescriptionCard({
         )}
       </div>
 
-      {/* Description */}
       {isEditing ? (
         <div className="space-y-3">
           <textarea
@@ -137,8 +131,7 @@ export function SceneDescriptionCard({
         </p>
       )}
 
-      {/* Confirm Button */}
-      {!scene.description_confirmed && !isEditing && (
+      {!scene.descriptionConfirmed && !isEditing && (
         <div className="mt-4 flex justify-end">
           <button
             onClick={handleConfirm}

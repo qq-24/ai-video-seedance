@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { ProjectCard } from "@/components/project/ProjectCard";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { getProjectsWithPreview } from "@/lib/db/projects-list";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -12,13 +12,10 @@ interface ProjectsPageProps {
 }
 
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSession();
 
   // This page is protected by middleware, but we also check here for safety
-  if (!user) {
+  if (!session.isLoggedIn) {
     redirect("/login");
   }
 
@@ -26,7 +23,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const currentPage = parseInt(resolvedSearchParams.page ?? "1", 10);
   const limit = 12;
 
-  const { projects, total } = await getProjectsWithPreview(user.id, {
+  const { projects, total } = await getProjectsWithPreview(undefined, {
     page: currentPage,
     limit,
   });
@@ -37,7 +34,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <Header user={user} />
+      <Header />
       <main className="flex flex-1 flex-col px-4 py-8">
         <div className="mx-auto w-full max-w-6xl">
           {/* Header */}

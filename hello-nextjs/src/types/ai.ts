@@ -52,7 +52,8 @@ export interface ZhipuError {
 // ============================================
 
 export interface SceneDescription {
-  order_index: number;
+  order_index?: number;
+  orderIndex?: number;
   description: string;
 }
 

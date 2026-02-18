@@ -1,13 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ProjectWithPreview } from "@/lib/db/projects-list";
-import type { project_stage } from "@/types/database";
 
 /**
  * Stage display configuration
  */
 const stageConfig: Record<
-  project_stage,
+  string,
   { label: string; className: string }
 > = {
   draft: { label: "草稿", className: "bg-zinc-100 text-zinc-600" },
@@ -41,11 +40,11 @@ interface ProjectCardProps {
  * Project card component for displaying in the project list.
  */
 export function ProjectCard({ project }: ProjectCardProps) {
-  const stage = stageConfig[project.stage];
+  const stage = stageConfig[project.stage] || { label: project.stage, className: "bg-zinc-100 text-zinc-600" };
   const styleName = project.style
     ? styleNames[project.style] ?? project.style
     : null;
-  const createdDate = new Date(project.created_at).toLocaleDateString("zh-CN", {
+  const createdDate = new Date(project.createdAt).toLocaleDateString("zh-CN", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -56,9 +55,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <div className="group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
         {/* Preview Image */}
         <div className="relative aspect-video w-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-          {project.preview_image_url ? (
+          {project.previewImageUrl ? (
             <Image
-              src={project.preview_image_url}
+              src={project.previewImageUrl}
               alt={project.title}
               fill
               className="object-cover transition-transform group-hover:scale-105"
@@ -102,8 +101,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 {styleName}
               </span>
             )}
-            {project.scene_count > 0 && (
-              <span>{project.scene_count} 个分镜</span>
+            {project.sceneCount > 0 && (
+              <span>{project.sceneCount} 个分镜</span>
             )}
           </div>
 

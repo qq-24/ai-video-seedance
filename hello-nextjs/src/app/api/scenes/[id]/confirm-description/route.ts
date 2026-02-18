@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import {
   getSceneById,
   confirmSceneDescription,
@@ -22,12 +22,9 @@ interface RouteParams {
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -36,8 +33,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // Get the scene to verify ownership
     const scene = await getSceneById(id);
 
-    // Verify user owns the project
-    const isOwner = await isProjectOwner(scene.project_id, user.id);
+    // Verify user owns the project (single user mode - always true)
+    const isOwner = await isProjectOwner(scene.projectId);
     if (!isOwner) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

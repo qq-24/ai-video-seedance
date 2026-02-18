@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { SceneVideoCard } from "./SceneVideoCard";
 import { useSignedUrls } from "@/hooks/useSignedUrls";
-import type { Scene, Image as ImageType, Video } from "@/types/database";
+import type { Scene, Image as ImageType, Video } from "@prisma/client";
 
 type SceneWithMedia = Scene & { images: ImageType[]; videos: Video[] };
 
@@ -12,49 +12,40 @@ interface SceneVideoListProps {
   scenes: SceneWithMedia[];
 }
 
-/**
- * Scene video list component.
- * Displays all scenes with their videos and bulk actions.
- */
 export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
   const [localScenes, setLocalScenes] = useState(scenes);
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isConfirmingAll, setIsConfirmingAll] = useState(false);
 
-  // Resume polling for any videos that are still processing when component mounts
   useEffect(() => {
     localScenes.forEach((scene) => {
-      if (scene.video_status === "processing" && scene.videos.length > 0) {
+      if (scene.videoStatus === "processing" && scene.videos.length > 0) {
         const latestVideo = scene.videos[scene.videos.length - 1];
-        if (latestVideo.task_id) {
-          // Resume polling for this video
-          pollForVideoCompletion(scene.id, latestVideo.task_id, latestVideo.id);
+        if (latestVideo.taskId) {
+          pollForVideoCompletion(scene.id, latestVideo.taskId, latestVideo.id);
         }
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, []);
 
-  // Collect all storage paths for images and videos
   const storagePaths = useMemo(() => {
     const paths: string[] = [];
     localScenes.forEach((scene) => {
-      if (scene.images[0]?.storage_path) {
-        paths.push(scene.images[0].storage_path);
+      if (scene.images[0]?.storagePath) {
+        paths.push(scene.images[0].storagePath);
       }
-      if (scene.videos[0]?.storage_path) {
-        paths.push(scene.videos[0].storage_path);
+      if (scene.videos[0]?.storagePath) {
+        paths.push(scene.videos[0].storagePath);
       }
     });
     return paths;
   }, [localScenes]);
 
-  // Fetch signed URLs for all media
   const { urls: signedUrls } = useSignedUrls({ paths: storagePaths });
 
-  const confirmedCount = localScenes.filter((s) => s.video_confirmed).length;
+  const confirmedCount = localScenes.filter((s) => s.videoConfirmed).length;
   const completedCount = localScenes.filter(
-    (s) => s.video_status === "completed"
+    (s) => s.videoStatus === "completed"
   ).length;
   const allConfirmed = confirmedCount === localScenes.length;
   const canConfirmAll = completedCount === localScenes.length && !allConfirmed;
@@ -76,14 +67,12 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
     const data = await response.json();
     const { taskId, videoId } = data;
 
-    // Update local state to show processing
     setLocalScenes((prev) =>
       prev.map((s) =>
-        s.id === sceneId ? { ...s, video_status: "processing" } : s
+        s.id === sceneId ? { ...s, videoStatus: "processing" } : s
       )
     );
 
-    // Poll for completion using task status API
     pollForVideoCompletion(sceneId, taskId, videoId);
   };
 
@@ -92,14 +81,13 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
     taskId: string,
     videoId: string
   ) => {
-    const maxAttempts = 120; // 10 minutes max
-    const interval = 5000; // 5 seconds
+    const maxAttempts = 120;
+    const interval = 5000;
 
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((resolve) => setTimeout(resolve, interval));
 
       try {
-        // Call video task status API to check and download video
         const statusResponse = await fetch(
           `/api/generate/video/task/${taskId}?sceneId=${sceneId}&projectId=${projectId}&videoId=${videoId}`
         );
@@ -109,7 +97,6 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         const statusData = await statusResponse.json();
 
         if (statusData.status === "completed") {
-          // Fetch updated project data to get the video URL
           const projectResponse = await fetch(`/api/projects/${projectId}`);
           if (projectResponse.ok) {
             const { project } = await projectResponse.json();
@@ -119,15 +106,14 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
             setLocalScenes((prev) =>
               prev.map((s) =>
                 s.id === sceneId
-                  ? { ...s, video_status: "completed", videos: scene?.videos ?? [] }
+                  ? { ...s, videoStatus: "completed", videos: scene?.videos ?? [] }
                   : s
               )
             );
           } else {
-            // Still mark as completed even if we can't get the project data
             setLocalScenes((prev) =>
               prev.map((s) =>
-                s.id === sceneId ? { ...s, video_status: "completed" } : s
+                s.id === sceneId ? { ...s, videoStatus: "completed" } : s
               )
             );
           }
@@ -137,7 +123,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         if (statusData.status === "failed") {
           setLocalScenes((prev) =>
             prev.map((s) =>
-              s.id === sceneId ? { ...s, video_status: "failed" } : s
+              s.id === sceneId ? { ...s, videoStatus: "failed" } : s
             )
           );
           return;
@@ -159,7 +145,7 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
 
     setLocalScenes((prev) =>
       prev.map((s) =>
-        s.id === sceneId ? { ...s, video_confirmed: true } : s
+        s.id === sceneId ? { ...s, videoConfirmed: true } : s
       )
     );
   };
@@ -182,12 +168,11 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
       const data = await response.json();
       const results = data.results || [];
 
-      // Start polling for all scenes that had tasks created
       results.forEach((result: { sceneId: string; taskId?: string; videoId?: string; success: boolean }) => {
         if (result.success && result.taskId && result.videoId) {
           setLocalScenes((prev) =>
             prev.map((s) =>
-              s.id === result.sceneId ? { ...s, video_status: "processing" } : s
+              s.id === result.sceneId ? { ...s, videoStatus: "processing" } : s
             )
           );
           pollForVideoCompletion(result.sceneId, result.taskId, result.videoId);
@@ -215,7 +200,6 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         throw new Error("Failed to confirm all videos");
       }
 
-      // Refresh the page to show the completed stage
       window.location.reload();
     } catch (error) {
       console.error("Failed to confirm all videos:", error);
@@ -225,7 +209,6 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
 
   return (
     <div className="space-y-4">
-      {/* Progress */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -239,7 +222,6 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         </div>
       </div>
 
-      {/* Generate All Button */}
       {!allConfirmed && (
         <div className="flex gap-3">
           <button
@@ -265,11 +247,10 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         </div>
       )}
 
-      {/* Scene Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {localScenes.map((scene) => {
-          const imageStoragePath = scene.images[0]?.storage_path;
-          const videoStoragePath = scene.videos[0]?.storage_path;
+          const imageStoragePath = scene.images[0]?.storagePath;
+          const videoStoragePath = scene.videos[0]?.storagePath;
           const signedImageUrl = imageStoragePath
             ? signedUrls[imageStoragePath]
             : undefined;
@@ -290,7 +271,6 @@ export function SceneVideoList({ projectId, scenes }: SceneVideoListProps) {
         })}
       </div>
 
-      {/* Confirm All Button */}
       {canConfirmAll && (
         <div className="flex justify-end border-t border-zinc-200 pt-4 dark:border-zinc-800">
           <button

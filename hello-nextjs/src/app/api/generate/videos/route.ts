@@ -1,10 +1,4 @@
-/**
- * Batch video generation API.
- * POST /api/generate/videos - Create video tasks for all scenes in a project
- */
-
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import {
   getScenesByProjectId,
   updateSceneVideoStatus,
@@ -16,6 +10,7 @@ import {
   isVolcVideoConfigured,
   VolcVideoApiError,
 } from "@/lib/ai/volc-video";
+import { isLoggedIn } from "@/lib/auth";
 
 interface VideoTaskResult {
   sceneId: string;
@@ -26,9 +21,6 @@ interface VideoTaskResult {
   error?: string;
 }
 
-/**
- * Create video task for a single scene (internal function)
- */
 async function createSceneVideoTask(
   sceneId: string,
   orderIndex: number,
@@ -41,10 +33,8 @@ async function createSceneVideoTask(
       watermark: false,
     });
 
-    // Update scene video status to processing
     await updateSceneVideoStatus(sceneId, "processing");
 
-    // Create a video record in the database with task_id
     const video = await createProcessingVideo(sceneId, task.taskId);
 
     return {
@@ -55,7 +45,6 @@ async function createSceneVideoTask(
       videoId: video.id,
     };
   } catch (error) {
-    // Update scene video status to failed
     await updateSceneVideoStatus(sceneId, "failed");
 
     return {
@@ -67,23 +56,12 @@ async function createSceneVideoTask(
   }
 }
 
-/**
- * POST /api/generate/videos - Create video tasks for all scenes in a project
- * Body: { projectId: string }
- * Returns: { success: boolean, results: VideoTaskResult[], created: number, failed: number }
- */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!(await isLoggedIn())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if Volc Video API is configured
     if (!isVolcVideoConfigured()) {
       return NextResponse.json(
         { error: "Video generation service is not configured. Please set VOLC_API_KEY." },
@@ -101,66 +79,56 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify project ownership
-    const project = await getProjectById(projectId, user.id);
+    const project = await getProjectById(projectId);
 
-    // Get all scenes for the project
     const scenes = await getScenesByProjectId(projectId);
 
-    // Filter scenes that need video generation:
-    // - image_confirmed = true or image_status = completed
-    // - video_status = pending or failed
     const scenesToGenerate = scenes.filter(
       (scene) =>
-        scene.image_status === "completed" &&
-        (scene.video_status === "pending" || scene.video_status === "failed")
+        scene.imageStatus === "completed" &&
+        (scene.videoStatus === "pending" || scene.videoStatus === "failed")
     );
 
     if (scenesToGenerate.length === 0) {
       return NextResponse.json({
         success: true,
-        message: "No scenes require video generation. All scenes either have videos or images are not ready.",
+        message: "No scenes require video generation.",
         results: [],
         created: 0,
         failed: 0,
       });
     }
 
-    // Update project stage to 'videos' if not already
     if (project.stage === "images") {
-      await updateProjectStage(projectId, user.id, "videos");
+      await updateProjectStage(projectId, "videos");
     }
 
-    // Create video tasks for all scenes sequentially
     const results: VideoTaskResult[] = [];
 
     for (const scene of scenesToGenerate) {
-      // Get the latest image for this scene
       const latestImage = await getLatestImageBySceneId(scene.id);
 
       if (!latestImage) {
         results.push({
           sceneId: scene.id,
-          orderIndex: scene.order_index,
+          orderIndex: scene.orderIndex,
           success: false,
           error: "No image found for scene",
         });
         continue;
       }
 
-      // Generate a fresh signed URL for the image (valid for 1 hour)
-      const imageUrl = await getSignedUrl(latestImage.storage_path, 3600);
+      const imageUrl = getSignedUrl(latestImage.storagePath);
 
       const result = await createSceneVideoTask(
         scene.id,
-        scene.order_index,
+        scene.orderIndex,
         scene.description,
         imageUrl
       );
       results.push(result);
     }
 
-    // Count successes and failures
     const created = results.filter((r) => r.success).length;
     const failed = results.filter((r) => !r.success).length;
 
@@ -175,7 +143,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creating video tasks:", error);
 
-    // Handle specific errors
     if (error instanceof VolcVideoApiError) {
       return NextResponse.json(
         { error: `Video generation error: ${error.message}` },
@@ -183,7 +150,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle project not found error
     if (error instanceof Error && error.message.includes("not found")) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSignedUrls } from "@/lib/db/media";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 
 /**
  * POST /api/storage/signed-urls
@@ -13,12 +13,9 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session.isLoggedIn) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -32,19 +29,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate paths belong to this user (security check)
-    const userId = user.id;
-    const validPaths = paths.filter((path: string) => {
-      // Path format: {userId}/{projectId}/{fileName}
-      return path.startsWith(`${userId}/`);
-    });
-
-    if (validPaths.length === 0) {
-      return NextResponse.json({ urls: {} });
-    }
-
     // Generate signed URLs
-    const urlMap = await getSignedUrls(validPaths, expiresIn ?? 3600);
+    const urlMap = getSignedUrls(paths, expiresIn ?? 3600);
 
     // Convert Map to object for JSON response
     const urls: Record<string, string> = {};

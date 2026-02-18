@@ -1,7 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { getMaterialById, updateMaterial } from "@/lib/db/materials";
-import type { MaterialUpdate } from "@/types/database";
+import { getSceneById } from "@/lib/db/scenes";
+import { isProjectOwner } from "@/lib/db/projects";
+import { getSession } from "@/lib/auth/session";
+import type { Material } from "@prisma/client";
 
 interface Params {
   params: Promise<{
@@ -17,12 +19,8 @@ export async function GET(request: Request, { params }: Params) {
   try {
     console.log("[GET /api/materials/:id] Starting request");
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.log("[GET /api/materials/:id] Unauthorized - no user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -37,19 +35,15 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ error: "Material not found" }, { status: 404 });
     }
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", material.scene_id)
-      .single();
+    const scene = await getSceneById(material.sceneId);
 
-    if (sceneError || !scene) {
+    if (!scene) {
       console.log("[GET /api/materials/:id] Scene not found for material");
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       console.log("[GET /api/materials/:id] Forbidden - user does not own material");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -67,27 +61,23 @@ export async function GET(request: Request, { params }: Params) {
 
 /**
  * PATCH /api/materials/:id
- * 更新素材信息（如 order_index）
+ * 更新素材信息（如 orderIndex）
  */
 export async function PATCH(request: Request, { params }: Params) {
   try {
     console.log("[PATCH /api/materials/:id] Starting request");
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.log("[PATCH /api/materials/:id] Unauthorized - no user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await request.json();
-    const { order_index, metadata } = body;
+    const { orderIndex, order_index, metadata } = body;
 
-    console.log("[PATCH /api/materials/:id] Updating material:", id, "with:", { order_index, metadata });
+    console.log("[PATCH /api/materials/:id] Updating material:", id, "with:", { orderIndex, order_index, metadata });
 
     const material = await getMaterialById(id);
 
@@ -96,26 +86,24 @@ export async function PATCH(request: Request, { params }: Params) {
       return NextResponse.json({ error: "Material not found" }, { status: 404 });
     }
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", material.scene_id)
-      .single();
+    const scene = await getSceneById(material.sceneId);
 
-    if (sceneError || !scene) {
+    if (!scene) {
       console.log("[PATCH /api/materials/:id] Scene not found for material");
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       console.log("[PATCH /api/materials/:id] Forbidden - user does not own material");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const updates: MaterialUpdate = {};
-    if (typeof order_index === "number") {
-      updates.order_index = order_index;
+    const updates: { metadata?: string; orderIndex?: number } = {};
+    if (typeof orderIndex === "number") {
+      updates.orderIndex = orderIndex;
+    } else if (typeof order_index === "number") {
+      updates.orderIndex = order_index;
     }
     if (metadata !== undefined) {
       updates.metadata = metadata;

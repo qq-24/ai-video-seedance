@@ -1,6 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { getMaterialById, deleteMaterial } from "@/lib/db/materials";
+import { getSceneById } from "@/lib/db/scenes";
+import { isProjectOwner } from "@/lib/db/projects";
+import { getSession } from "@/lib/auth/session";
+import type { Material } from "@prisma/client";
 
 /**
  * POST /api/materials/detach
@@ -10,12 +13,8 @@ export async function POST(request: Request) {
   try {
     console.log("[POST /api/materials/detach] Starting request");
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await getSession();
+    if (!session.isLoggedIn) {
       console.log("[POST /api/materials/detach] Unauthorized - no user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -40,19 +39,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Material not found" }, { status: 404 });
     }
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("scenes")
-      .select("id, project_id, projects!inner(user_id)")
-      .eq("id", material.scene_id)
-      .single();
+    const scene = await getSceneById(material.sceneId);
 
-    if (sceneError || !scene) {
+    if (!scene) {
       console.log("[POST /api/materials/detach] Scene not found for material");
       return NextResponse.json({ error: "Scene not found" }, { status: 404 });
     }
 
-    const projectData = scene.projects as { user_id: string };
-    if (projectData.user_id !== user.id) {
+    const isOwner = await isProjectOwner(scene.projectId, "local-user");
+    if (!isOwner) {
       console.log("[POST /api/materials/detach] Forbidden - user does not own material");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -62,7 +57,7 @@ export async function POST(request: Request) {
     console.log("[POST /api/materials/detach] Material detached successfully (DB record deleted, file preserved):", materialId);
     return NextResponse.json({
       success: true,
-      storage_path: material.storage_path,
+      storagePath: material.storagePath,
       message: "Material detached from scene. File preserved in storage."
     });
   } catch (error) {
